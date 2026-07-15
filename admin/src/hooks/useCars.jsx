@@ -1,31 +1,26 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import * as carsApi from "@/api/carsApi";
 
 export function useCars(filters = {}) {
   const queryClient = useQueryClient();
 
   const carsQuery = useQuery({
     queryKey: ["cars", filters],
-    queryFn: async () => {
-      if (filters.status) {
-        return base44.entities.Car.filter({ status: filters.status }, "-created_date");
-      }
-      return base44.entities.Car.list("-created_date");
-    },
+    queryFn: () => carsApi.getCars(filters),
   });
 
   const createCar = useMutation({
-    mutationFn: (data) => base44.entities.Car.create(data),
+    mutationFn: (data) => carsApi.createCar(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cars"] }),
   });
 
   const updateCar = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Car.update(id, data),
+    mutationFn: ({ id, data }) => carsApi.updateCar(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cars"] }),
   });
 
   const deleteCar = useMutation({
-    mutationFn: (id) => base44.entities.Car.delete(id),
+    mutationFn: (id) => carsApi.deleteCar(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cars"] }),
   });
 
@@ -42,7 +37,7 @@ export function useCars(filters = {}) {
 export function useCar(id) {
   return useQuery({
     queryKey: ["car", id],
-    queryFn: () => base44.entities.Car.get(id),
+    queryFn: () => carsApi.getCar(id),
     enabled: !!id,
   });
 }

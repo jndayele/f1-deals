@@ -1,25 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import * as reviewsApi from "@/api/reviewsApi";
 
 export function useReviews(filters = {}) {
   const queryClient = useQueryClient();
 
   const reviewsQuery = useQuery({
     queryKey: ["reviews", filters],
-    queryFn: async () => {
-      if (filters.status) {
-        return base44.entities.Review.filter({ status: filters.status }, "-created_date");
-      }
-      return base44.entities.Review.list("-created_date");
-    },
+    queryFn: () => reviewsApi.getReviews(filters),
   });
 
   const moderateReview = useMutation({
-    mutationFn: ({ id, status }) =>
-      base44.entities.Review.update(id, {
-        status,
-        moderated_date: new Date().toISOString(),
-      }),
+    mutationFn: ({ id, status }) => reviewsApi.moderateReview(id, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reviews"] }),
   });
 

@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import * as carsApi from "@/api/carsApi";
+import * as reviewsApi from "@/api/reviewsApi";
 
 export function useDashboardStats() {
   return useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
       const [allCars, pendingReviews] = await Promise.all([
-        base44.entities.Car.list("-created_date"),
-        base44.entities.Review.filter({ status: "pending" }),
+        carsApi.getCars(),
+        reviewsApi.getReviews({ status: "pending" }),
       ]);
 
       const active = allCars.filter((c) => c.status === "active");

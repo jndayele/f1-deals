@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum CarStatus {
+  Available
+  Sold
+  Archived
+}
+
+enum TransmissionType {
+  Automatic
+  Manual
+}
+
+enum FuelType {
+  Petrol
+  Diesel
+  Hybrid
+  Electric
+}
+
+enum Condition {
+  New
+  SlightlyUsed
+}
+
+model Car {
+  id               Int              @id @default(autoincrement())
+  title            String
+  make             String
+  model            String
+  year             Int
+  price            Float
+  mileage          Int
+  transmission     TransmissionType
+  fuelType         FuelType
+  bodyType         String
+  condition        Condition
+  description      String
+  status           CarStatus        @default(Available)
+  soldAt           DateTime?
+  archivedAt       DateTime?
+  isFeatured       Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  media            CarMedia[]
+}
+
+model CarMedia {
+  id        Int      @id @default(autoincrement())
+  carId     Int
+  isPhoto   Boolean
+  url       String
+  order     Int
+  createdAt DateTime @default(now())
+  
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+}
+
+enum ReviewStatus {
+  Pending
+  Approved
+  Rejected
+}
+
+model Review {
+  id        Int          @id @default(autoincrement())
+  name      String
+  rating    Int
+  message   String
+  status    ReviewStatus @default(Pending)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+enum EnquiryType {
+  Financing
+  TradeIn
+  General
+}
+
+model Enquiry {
+  id             Int         @id @default(autoincrement())
+  name           String
+  phoneNumber    String
+  email          String?
+  message        String
+  type           EnquiryType
+  emailSentAt    DateTime?
+  createdAt      DateTime    @default(now())
+}

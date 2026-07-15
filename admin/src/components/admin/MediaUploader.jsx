@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { Upload, X, GripVertical, Image, Film, Star } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { Upload, X, GripVertical, Image, Film, Star, Loader2 } from "lucide-react";
+import { uploadFile } from "@/api/authApi";
 
 export default function MediaUploader({ value = [], onChange }) {
   const [uploading, setUploading] = useState(false);
@@ -19,11 +19,15 @@ export default function MediaUploader({ value = [], onChange }) {
         const isImage = file.type.startsWith("image/");
         if (!isVideo && !isImage) continue;
 
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
-        newMedia.push({
-          url: file_url,
-          type: isVideo ? "video" : "image",
-        });
+        try {
+          const { file_url } = await uploadFile(file);
+          newMedia.push({
+            url: file_url,
+            type: isVideo ? "video" : "image",
+          });
+        } catch (err) {
+          console.error("Failed to upload file:", file.name, err);
+        }
       }
 
       onChange([...value, ...newMedia]);
@@ -66,7 +70,11 @@ export default function MediaUploader({ value = [], onChange }) {
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
       >
-        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+        {uploading ? (
+          <Loader2 className="w-8 h-8 text-red-500 mx-auto mb-2 animate-spin" />
+        ) : (
+          <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+        )}
         <p className="text-sm font-medium text-gray-700">
           {uploading ? "Uploading..." : "Drop photos or videos here, or click to browse"}
         </p>

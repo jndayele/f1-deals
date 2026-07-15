@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Environment variables — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# Prisma generated client (regenerated during deploy)
+prisma/generated/
+
+# Logs
+*.log
+logs/
+
+# OS & editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Test artifacts
+test_*.js
