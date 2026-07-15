@@ -4,8 +4,7 @@ import { ArrowRight } from "lucide-react";
 import ScrollReveal from "@/components/ScrollReveal";
 import { getWhatsAppLink } from "@/lib/mockData";
 
-const ABOUT_IMAGE = "https://media.base44.com/images/public/6a5166ae47e3a25d1b6256a7/38f77bb58_generated_781d9f14.png";
-const SECONDARY_IMAGE = "https://media.base44.com/images/public/6a5166ae47e3a25d1b6256a7/d0a318ebb_generated_2ddb5a36.png";
+
 
 export default function About() {
   return (
@@ -29,7 +28,7 @@ export default function About() {
           <ScrollReveal direction="left">
             <div className="aspect-[4/5] overflow-hidden border border-white/10 relative">
               <img
-                src={ABOUT_IMAGE}
+                src="/about.png"
                 alt="F1 Deals interior detail"
                 className="w-full h-full object-cover"
               />
@@ -174,7 +173,7 @@ export default function About() {
           <ScrollReveal direction="right" delay={0.15}>
             <div className="aspect-[16/10] overflow-hidden border border-white/10">
               <img
-                src={SECONDARY_IMAGE}
+                src="/ready-car.png"
                 alt="Premium vehicle"
                 className="w-full h-full object-cover"
               />

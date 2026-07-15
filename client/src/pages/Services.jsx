@@ -4,12 +4,12 @@ import ScrollReveal from "@/components/ScrollReveal";
 import { SERVICES, getWhatsAppLink } from "@/lib/mockData";
 
 const SERVICE_IMAGES = [
-  "https://media.base44.com/images/public/6a5166ae47e3a25d1b6256a7/9e532a19f_generated_c276cafd.png",
-  "https://media.base44.com/images/public/6a5166ae47e3a25d1b6256a7/7a404526e_generated_dfada87f.png",
-  "https://media.base44.com/images/public/6a5166ae47e3a25d1b6256a7/ed3f71ded_generated_86b21604.png",
-  "https://media.base44.com/images/public/6a5166ae47e3a25d1b6256a7/c3e63115f_generated_215e2f3e.png",
-  "https://media.base44.com/images/public/6a5166ae47e3a25d1b6256a7/54cea2cd0_generated_d8e5df0e.png",
-  "https://media.base44.com/images/public/6a5166ae47e3a25d1b6256a7/171951325_generated_1ec9a3a3.png",
+ "/home-page.png",
+ "car-selling.png",
+ "car-swapping.png",
+ "car-shipping.png",
+ "maintenance.png",
+ "parts.png",
 ];
 
 export default function Services() {

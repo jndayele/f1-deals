@@ -2,7 +2,6 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { getWhatsAppLink } from "@/lib/mockData";
 
-const LOGO_URL = "https://media.base44.com/images/public/user_6a516625a3a1592cabb56d80/39203db14_f1dealslogo.jpg";
 
 export default function Footer() {
   return (
@@ -36,7 +35,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
           <div>
-            <img src={LOGO_URL} alt="F1 Deals" className="h-16 w-auto mb-4" />
+            <img src="/f1deals logo.jpeg" alt="F1 Deals" className="h-16 w-auto mb-4" />
             <p className="text-sm text-white/50 leading-relaxed">
               Ghana's premier nationwide car broker. Buy, sell, swap, and ship vehicles with confidence.
             </p>
@@ -109,12 +108,12 @@ export default function Footer() {
                 Instagram — @f1_deals_45
               </a>
               <a
-                href="https://tiktok.com/@f1_deal"
+                href="https://tiktok.com/@f1_deals"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-white/50 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-[#E10600] focus-visible:outline-none"
               >
-                TikTok — @f1_deal
+                TikTok — @f1_deals
               </a>
               <span className="text-sm text-white/50">
                 Snapchat — F1 DEALS

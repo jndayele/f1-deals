@@ -3,8 +3,6 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Phone } from "lucide-react";
 import { getWhatsAppLink } from "@/lib/mockData";
 
-const LOGO_URL = "https://media.base44.com/images/public/user_6a516625a3a1592cabb56d80/39203db14_f1dealslogo.jpg";
-
 const NAV_LINKS = [
   { label: "Home", path: "/" },
   { label: "Inventory", path: "/inventory" },
@@ -39,7 +37,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 shrink-0">
-            <img src={LOGO_URL} alt="F1 Deals" className="h-14 w-auto object-contain" />
+            <img src="/f1deals logo.jpeg" alt="F1 Deals" className="h-14 w-auto object-contain" />
           </Link>
 
           {/* Desktop Links */}

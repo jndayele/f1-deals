@@ -8,7 +8,6 @@ import StarRating from "@/components/StarRating";
 import { carService, reviewService } from "@/lib/api";
 import { getWhatsAppLink, SERVICES } from "@/lib/mockData";
 
-const HERO_IMAGE = "https://media.base44.com/images/public/6a5166ae47e3a25d1b6256a7/9e532a19f_generated_c276cafd.png";
 
 function CountUp({ target, suffix = "" }) {
   const [count, setCount] = useState(0);
@@ -61,7 +60,7 @@ export default function Home() {
         {/* Background Image */}
         <div className="absolute inset-0">
           <img
-            src={HERO_IMAGE}
+            src="/home-page.png"
             alt="Luxury vehicle"
             className="w-full h-full object-cover"
           />
