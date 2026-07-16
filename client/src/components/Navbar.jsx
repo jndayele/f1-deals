@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Phone } from "lucide-react";
-import { getWhatsAppLink } from "@/lib/mockData";
+import { getWhatsAppLink } from "@/lib/constants";
 
 const NAV_LINKS = [
   { label: "Home", path: "/" },

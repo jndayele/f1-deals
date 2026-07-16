@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, ChevronLeft, ChevronRight, MessageCircle, Send, X } from "lucide-react";
 import ScrollReveal from "@/components/ScrollReveal";
 import { carService, enquiryService } from "@/lib/api";
-import { getWhatsAppLink } from "@/lib/mockData";
+import { getWhatsAppLink } from "@/lib/constants";
 
 export default function CarDetail() {
   const { id } = useParams();
@@ -12,7 +12,7 @@ export default function CarDetail() {
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
   const [lightbox, setLightbox] = useState(false);
-  const [formData, setFormData] = useState({ name: "", phone: "", message: "" });
+  const [formData, setFormData] = useState({ name: "", phoneNumber: "", email: "", message: "" });
   const [formSent, setFormSent] = useState(false);
   const [sending, setSending] = useState(false);
 
@@ -20,21 +20,33 @@ export default function CarDetail() {
     carService.getById(id).then((data) => {
       setCar(data);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, [id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSending(true);
-    await enquiryService.send({
-      carId: car.id,
-      carName: car.name,
-      ...formData,
-    });
-    setSending(false);
-    setFormSent(true);
-    setFormData({ name: "", phone: "", message: "" });
+    try {
+      await enquiryService.send({
+        ...formData,
+        type: "General",
+        carId: car.id,
+        carName: car.title || `${car.year} ${car.make} ${car.model}`,
+      });
+      setFormSent(true);
+      setFormData({ name: "", phoneNumber: "", email: "", message: "" });
+    } catch (err) {
+      console.error('Enquiry error:', err);
+    } finally {
+      setSending(false);
+    }
   };
+
+  // Normalise the data from the backend
+  const images = car?.media?.filter(m => m.isPhoto).map(m => m.url) ?? [];
+  const displayName = car?.title || (car ? `${car.year} ${car.make} ${car.model}` : "");
+  const isSold = car?.isSold || car?.status === "Sold";
+  const fuelType = car?.fuelType || car?.fuel;
 
   if (loading) {
     return (
@@ -58,7 +70,7 @@ export default function CarDetail() {
     );
   }
 
-  const whatsappMsg = `Hi F1 Deals, I'm interested in the ${car.year} ${car.name} (GH₵${car.price.toLocaleString()}). Is it still available?`;
+  const whatsappMsg = `Hi F1 Deals, I'm interested in the ${car.year} ${displayName} (GH₵${car.price?.toLocaleString()}). Is it still available?`;
 
   return (
     <div className="bg-[#0A0A0A] min-h-screen pt-24 pb-20">
@@ -75,7 +87,7 @@ export default function CarDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-10">
           {/* LEFT — Gallery + Details */}
           <div>
-            {/* Gallery */}
+                    {/* Gallery */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -83,22 +95,22 @@ export default function CarDetail() {
               onClick={() => setLightbox(true)}
             >
               <img
-                src={car.images[activeImage]}
-                alt={car.name}
+                src={images[activeImage] || "/ready-car.png"}
+                alt={displayName}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-              {car.sold && (
+              {isSold && (
                 <div className="absolute top-8 -left-12 bg-[#E10600] text-white py-2 px-16 -rotate-45 font-heading font-bold uppercase tracking-wider text-sm">
                   Sold
                 </div>
               )}
             </motion.div>
 
-            {/* Thumbnails */}
-            {car.images.length > 1 && (
+                        {/* Thumbnails */}
+            {images.length > 1 && (
               <div className="flex gap-2 mb-10">
-                {car.images.map((img, i) => (
+                {images.map((img, i) => (
                   <button
                     key={i}
                     onClick={() => setActiveImage(i)}
@@ -113,7 +125,7 @@ export default function CarDetail() {
             )}
 
             {/* Video */}
-            {car.video && (
+            {car.videoUrl && (
               <ScrollReveal>
                 <div className="mb-10">
                   <h3 className="font-mono text-[11px] uppercase tracking-[0.3em] text-[#E10600] mb-4 flex items-center gap-3">
@@ -122,7 +134,7 @@ export default function CarDetail() {
                   </h3>
                   <div className="aspect-video border border-white/10 overflow-hidden">
                     <iframe
-                      src={car.video}
+                      src={car.videoUrl}
                       title="Vehicle video"
                       className="w-full h-full"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -152,17 +164,13 @@ export default function CarDetail() {
               </h3>
               <div className="border border-white/10">
                 {[
-                  ["Year", car.year],
-                  ["Condition", car.condition],
-                  ["Mileage", `${car.mileage.toLocaleString()} km`],
-                  ["Transmission", car.transmission],
-                  ["Fuel Type", car.fuel],
-                  ["Body Type", car.bodyType],
-                  ...Object.entries(car.specs).map(([key, val]) => [
-                    key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, " $1"),
-                    val,
-                  ]),
-                ].map(([label, value], i) => (
+                   ["Year", car.year],
+                   ["Condition", car.condition],
+                   ["Mileage", car.mileage ? `${car.mileage.toLocaleString()} km` : "—"],
+                   ["Transmission", car.transmission],
+                   ["Fuel Type", fuelType],
+                   ["Body Type", car.bodyType],
+                 ].filter(([, v]) => v).map(([label, value], i) => (
                   <div
                     key={label}
                     className={`flex justify-between items-center px-5 py-3.5 ${
@@ -186,7 +194,7 @@ export default function CarDetail() {
                 {car.condition} &mdash; {car.year}
               </p>
               <h1 className="font-heading text-2xl lg:text-3xl font-bold text-white mb-4">
-                {car.name}
+                {displayName}
               </h1>
               <p className="font-heading text-3xl lg:text-4xl font-bold text-white mb-8">
                 GH₵{car.price.toLocaleString()}
@@ -241,8 +249,8 @@ export default function CarDetail() {
                       type="tel"
                       placeholder="Phone number"
                       required
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      value={formData.phoneNumber}
+                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                       className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-3 placeholder:text-white/20 focus:border-[#E10600] focus:outline-none transition-colors"
                     />
                     <textarea
@@ -268,7 +276,7 @@ export default function CarDetail() {
         </div>
       </div>
 
-      {/* Lightbox */}
+                {/* Lightbox */}
       {lightbox && (
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4">
           <button
@@ -278,17 +286,17 @@ export default function CarDetail() {
           >
             <X size={28} />
           </button>
-          {car.images.length > 1 && (
+          {images.length > 1 && (
             <>
               <button
-                onClick={() => setActiveImage((activeImage - 1 + car.images.length) % car.images.length)}
+                onClick={() => setActiveImage((activeImage - 1 + images.length) % images.length)}
                 className="absolute left-4 text-white/60 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-[#E10600] focus-visible:outline-none"
                 aria-label="Previous image"
               >
                 <ChevronLeft size={36} />
               </button>
               <button
-                onClick={() => setActiveImage((activeImage + 1) % car.images.length)}
+                onClick={() => setActiveImage((activeImage + 1) % images.length)}
                 className="absolute right-4 text-white/60 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-[#E10600] focus-visible:outline-none"
                 aria-label="Next image"
               >
@@ -297,8 +305,8 @@ export default function CarDetail() {
             </>
           )}
           <img
-            src={car.images[activeImage]}
-            alt={car.name}
+            src={images[activeImage] || "/ready-car.png"}
+            alt={displayName}
             className="max-w-full max-h-[85vh] object-contain"
           />
         </div>

@@ -3,11 +3,12 @@ const cloudinary = require('../config/cloudinary');
 const streamifier = require('streamifier');
 const { getPaginationParams, formatPaginatedResponse } = require('../utils/pagination');
 const { invalidateCache } = require('../middleware/cache.middleware');
+const socket = require('../config/socket');
 
 exports.listCars = async (req, res) => {
   try {
     const { page, pageSize, skip, take } = getPaginationParams(req);
-    const { minPrice, maxPrice, make, year, bodyType, condition, status } = req.query;
+    const { minPrice, maxPrice, make, year, bodyType, condition, status, search } = req.query;
 
     const where = {};
     if (status) {
@@ -23,6 +24,13 @@ exports.listCars = async (req, res) => {
     if (year) where.year = parseInt(year, 10);
     if (bodyType) where.bodyType = { equals: bodyType, mode: 'insensitive' };
     if (condition) where.condition = condition;
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { make: { contains: search, mode: 'insensitive' } },
+        { model: { contains: search, mode: 'insensitive' } }
+      ];
+    }
 
     const [totalCount, cars] = await Promise.all([
       prisma.car.count({ where }),
@@ -71,6 +79,13 @@ exports.createCar = async (req, res) => {
       },
       include: { media: true }
     });
+
+    // Emit event for real-time client updates
+    try {
+      socket.getIO().emit('new_listing', car);
+    } catch (e) {
+      console.error('Socket error emitting new_listing:', e);
+    }
 
     await invalidateCache('cache:cars');
     res.status(201).json({ success: true, data: car });
@@ -217,6 +232,39 @@ exports.reorderMedia = async (req, res) => {
 
     await invalidateCache('cache:cars');
     res.status(200).json({ success: true, data: updatedMedia });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' } });
+  }
+};
+
+exports.deleteMedia = async (req, res) => {
+  try {
+    const carId = parseInt(req.params.id, 10);
+    const mediaId = parseInt(req.params.mediaId, 10);
+
+    const media = await prisma.carMedia.findUnique({
+      where: { id: mediaId },
+    });
+
+    if (!media || media.carId !== carId) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Media not found' } });
+    }
+
+    if (media.url.includes('cloudinary.com')) {
+      try {
+        const parts = media.url.split('/');
+        const fileWithExt = parts[parts.length - 1];
+        const publicId = `f1deals/${fileWithExt.split('.')[0]}`;
+        await cloudinary.uploader.destroy(publicId, { resource_type: media.isPhoto ? 'image' : 'video' });
+      } catch (cloudErr) {
+        console.error('Failed to delete from Cloudinary:', cloudErr);
+      }
+    }
+
+    await prisma.carMedia.delete({ where: { id: mediaId } });
+    await invalidateCache('cache:cars');
+    res.status(200).json({ success: true, data: { message: 'Media deleted successfully' } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: { code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' } });

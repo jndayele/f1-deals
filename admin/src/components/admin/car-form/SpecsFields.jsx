@@ -12,7 +12,10 @@ import {
 const TRANSMISSIONS = ["Automatic", "Manual"];
 const FUEL_TYPES = ["Petrol", "Diesel", "Hybrid", "Electric"];
 const BODY_TYPES = ["Sedan", "SUV", "Hatchback", "Coupe", "Convertible", "Wagon", "Van", "Truck", "Crossover"];
-const CONDITIONS = ["New", "Slightly Used"];
+const CONDITIONS = [
+  { value: "New", label: "New" },
+  { value: "SlightlyUsed", label: "Slightly Used" }
+];
 
 export default function SpecsFields({ values, onChange }) {
   const update = (field, val) => onChange({ ...values, [field]: val });
@@ -86,7 +89,7 @@ export default function SpecsFields({ values, onChange }) {
           </SelectTrigger>
           <SelectContent>
             {CONDITIONS.map((c) => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
+              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>

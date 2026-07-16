@@ -17,6 +17,11 @@ import api from './apiClient';
  * Converts PascalCase/camelCase backend fields → snake_case UI fields.
  */
 function normalizeCar(car) {
+  let media = car.media || [];
+  if (media.length === 0 && car.coverPhotoUrl) {
+    media = [{ url: car.coverPhotoUrl, isPhoto: true }];
+  }
+
   return {
     ...car,
     // Field name aliases expected by the UI components
@@ -28,9 +33,9 @@ function normalizeCar(car) {
     status: car.status ? car.status.toLowerCase() : car.status,
     // Media: backend returns CarMedia array with { id, url, isPhoto, order }
     // UI expects [{ url, type: 'image'|'video' }]
-    media: (car.media || []).map(m => ({
+    media: media.map(m => ({
       ...m,
-      type: m.isPhoto ? 'image' : 'video',
+      type: m.isPhoto === false ? 'video' : 'image',
     })),
   };
 }
@@ -66,9 +71,16 @@ export async function getCars(filters = {}) {
     params.status = map[params.status.toLowerCase()] || params.status;
   }
   const { data: body } = await api.get('/admin/cars', { params });
-  // body.data is { cars: [...], pagination: {} }
-  const cars = body.data?.cars ?? body.data ?? [];
-  return Array.isArray(cars) ? cars.map(normalizeCar) : [];
+  const cars = body.data?.items ?? body.data?.cars ?? (Array.isArray(body.data) ? body.data : []);
+  return {
+    cars: Array.isArray(cars) ? cars.map(normalizeCar) : [],
+    pagination: {
+      totalCount: body.data?.totalCount || 0,
+      totalPages: Math.ceil((body.data?.totalCount || 0) / (body.data?.pageSize || 10)) || 1,
+      currentPage: body.data?.currentPage || 1,
+      pageSize: body.data?.pageSize || 10
+    }
+  };
 }
 
 /**
@@ -149,5 +161,16 @@ export async function uploadCarMedia(carId, files) {
  */
 export async function reorderCarMedia(carId, orderedMediaIds) {
   const { data: body } = await api.put(`/admin/cars/${carId}/media/reorder`, { orderedMediaIds });
+  return body.data;
+}
+
+/**
+ * Delete a specific media file for a car.
+ * Backend: DELETE /api/v1/admin/cars/:id/media/:mediaId
+ * @param {number} carId
+ * @param {number} mediaId
+ */
+export async function deleteCarMedia(carId, mediaId) {
+  const { data: body } = await api.delete(`/admin/cars/${carId}/media/${mediaId}`);
   return body.data;
 }

@@ -16,7 +16,7 @@ export default function InventoryChart({ trends = [] }) {
   
   // If the backend returns the array in descending time (newest first), reverse it for the chart (left to right = old to new)
   // Let's ensure it's left to right
-  const data = [...trends].reverse(); 
+  const data = [...trends];
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">

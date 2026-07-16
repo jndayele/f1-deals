@@ -19,17 +19,24 @@ export function useCars(filters = {}) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cars"] }),
   });
 
+  const updateCarStatus = useMutation({
+    mutationFn: ({ id, status }) => carsApi.updateCarStatus(id, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cars"] }),
+  });
+
   const deleteCar = useMutation({
     mutationFn: (id) => carsApi.deleteCar(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cars"] }),
   });
 
   return {
-    cars: carsQuery.data || [],
+    cars: carsQuery.data?.cars || [],
+    pagination: carsQuery.data?.pagination || { currentPage: 1, totalPages: 1 },
     isLoading: carsQuery.isLoading,
     error: carsQuery.error,
     createCar,
     updateCar,
+    updateCarStatus,
     deleteCar,
   };
 }

@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Save, Loader2, User, Lock } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
-import { changePassword } from "@/api/authApi";
+import { changePassword, logout } from "@/api/authApi";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminSettings() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -29,10 +31,14 @@ export default function AdminSettings() {
     setSaving(true);
     try {
       await changePassword(currentPassword, newPassword);
-      toast({ title: "Password changed successfully" });
+      toast({ title: "Password changed successfully. Please log in again." });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      
+      // Log out and redirect
+      await logout();
+      navigate("/login");
     } catch (err) {
       const message = err.response?.data?.error?.message || "Failed to change password";
       toast({ title: message, variant: "destructive" });

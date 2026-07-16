@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { MessageCircle, Instagram, Send, ArrowRight } from "lucide-react";
 import ScrollReveal from "@/components/ScrollReveal";
-import { getWhatsAppLink, WHATSAPP_NUMBER } from "@/lib/mockData";
+import { getWhatsAppLink, WHATSAPP_NUMBER } from "@/lib/constants";
 import { enquiryService } from "@/lib/api";
+import SEO from "@/components/SEO";
 
 const SOCIALS = [
   {
@@ -47,24 +48,37 @@ export default function Contact() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    phone: "",
-    type: "general",
+    phoneNumber: "",
+    type: "General",
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    await enquiryService.send(formData);
-    setSubmitting(false);
-    setSubmitted(true);
-    setFormData({ name: "", email: "", phone: "", type: "general", message: "" });
+    setError("");
+    try {
+      await enquiryService.send(formData);
+      setSubmitted(true);
+      setFormData({ name: "", email: "", phoneNumber: "", type: "General", message: "" });
+    } catch (err) {
+      setError("Failed to send enquiry. Please try again or contact us on WhatsApp.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="bg-[#0A0A0A] min-h-screen pt-24 pb-20">
+      <SEO
+        title="Contact Us — Get in Touch with F1 Deals Ghana"
+        description="Contact F1 Deals Ghana via WhatsApp, Instagram, TikTok, or our online enquiry form. We're available for car buying, selling, financing, and trade-in enquiries. Response within 1 hour."
+        canonicalPath="/contact"
+        ogImage="/home-page.png"
+      />
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
         {/* Header */}
         <ScrollReveal>
@@ -195,8 +209,8 @@ export default function Contact() {
                       <input
                         type="tel"
                         required
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        value={formData.phoneNumber}
+                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                         className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-3 placeholder:text-white/20 focus:border-[#E10600] focus:outline-none transition-colors"
                       />
                     </div>
@@ -210,10 +224,9 @@ export default function Contact() {
                       onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                       className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-3 focus:border-[#E10600] focus:outline-none transition-colors appearance-none cursor-pointer"
                     >
-                      <option value="general" className="bg-[#0A0A0A]">General Enquiry</option>
-                      <option value="financing" className="bg-[#0A0A0A]">Financing</option>
-                      <option value="trade-in" className="bg-[#0A0A0A]">Trade-In</option>
-                      <option value="shipping" className="bg-[#0A0A0A]">Shipping Quote</option>
+                      <option value="General" className="bg-[#0A0A0A]">General Enquiry</option>
+                      <option value="Financing" className="bg-[#0A0A0A]">Financing</option>
+                      <option value="TradeIn" className="bg-[#0A0A0A]">Trade-In</option>
                     </select>
                   </div>
                   <div>
@@ -228,14 +241,17 @@ export default function Contact() {
                       className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-3 placeholder:text-white/20 focus:border-[#E10600] focus:outline-none transition-colors resize-none"
                     />
                   </div>
-                  <button
+                   {error && (
+                     <p className="text-red-400 text-sm">{error}</p>
+                   )}
+                   <button
                     type="submit"
                     disabled={submitting}
                     className="w-full bg-[#E10600] text-white px-6 py-3.5 font-heading font-semibold text-sm uppercase tracking-wider hover:bg-[#B80500] transition-colors flex items-center justify-center gap-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
-                  >
-                    <ArrowRight size={16} />
-                    {submitting ? "Sending…" : "Send Enquiry"}
-                  </button>
+                   >
+                     <ArrowRight size={16} />
+                     {submitting ? "Sending…" : "Send Enquiry"}
+                   </button>
                 </form>
               )}
             </div>

@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const pinoHttp = require('pino-http');
+
 const logger = require('./utils/logger');
 
 const healthRoutes = require('./routes/health.routes');
@@ -36,8 +36,16 @@ app.use(cors({
   credentials: true
 }));
 
-// Structured HTTP request logging
-app.use(pinoHttp({ logger }));
+// Simple, clean request logging
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const ms = Date.now() - start;
+    const color = res.statusCode >= 500 ? '\x1b[31m' : res.statusCode >= 400 ? '\x1b[33m' : '\x1b[32m';
+    console.log(`${req.method} ${req.originalUrl} ${color}${res.statusCode}\x1b[0m - ${ms}ms`);
+  });
+  next();
+});
 
 app.use(express.json());
 

@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, PlusCircle, Car, Pencil, Trash2, Tag, MoreHorizontal, Eye } from "lucide-react";
+import { Search, PlusCircle, Car, Pencil, Trash2, Tag, MoreHorizontal, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,38 +31,44 @@ const TABS = [
   { key: "archived", label: "Archived" },
 ];
 
+// Custom hook to debounce values (prevents hammering the API on every keystroke)
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
+
 export default function ManageListings() {
   const [activeTab, setActiveTab] = useState("active");
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 500);
+  const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { cars, isLoading, updateCar, deleteCar } = useCars({ status: activeTab });
+  
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, debouncedSearch]);
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return cars;
-    const q = search.toLowerCase();
-    return cars.filter(
-      (c) =>
-        c.title?.toLowerCase().includes(q) ||
-        c.make?.toLowerCase().includes(q) ||
-        c.model?.toLowerCase().includes(q)
-    );
-  }, [cars, search]);
+  const { cars, pagination, isLoading, updateCarStatus, deleteCar } = useCars({ 
+    status: activeTab,
+    search: debouncedSearch,
+    page
+  });
 
   const handleMarkSold = async (car) => {
-    await updateCar.mutateAsync({
-      id: car.id,
-      data: { status: "sold", sold_date: new Date().toISOString() },
-    });
+    await updateCarStatus.mutateAsync({ id: car.id, status: "Sold" });
     toast({ title: `"${car.title}" marked as sold` });
   };
 
   const handleReactivate = async (car) => {
-    await updateCar.mutateAsync({
-      id: car.id,
-      data: { status: "active", sold_date: null },
-    });
+    await updateCarStatus.mutateAsync({ id: car.id, status: "Available" });
     toast({ title: `"${car.title}" reactivated` });
   };
 
@@ -114,30 +120,30 @@ export default function ManageListings() {
         <div className="relative flex-1 w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
-            placeholder="Search by title, make, or model..."
+            placeholder="Search listings..."
             className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col">
         {isLoading ? (
           <SkeletonTable rows={5} />
-        ) : filtered.length === 0 ? (
+        ) : cars.length === 0 ? (
           <EmptyState
             icon={Car}
-            title={search ? "No results found" : `No ${activeTab} listings`}
+            title={debouncedSearch ? "No results found" : `No ${activeTab} listings`}
             description={
-              search
+              debouncedSearch
                 ? "Try a different search term"
                 : activeTab === "active"
                 ? "Add your first car to get started"
                 : undefined
             }
             action={
-              activeTab === "active" && !search ? (
+              activeTab === "active" && !debouncedSearch ? (
                 <Link to="/cars/new">
                   <Button className="bg-red-600 hover:bg-red-700 text-white gap-2">
                     <PlusCircle className="w-4 h-4" /> Add New Car
@@ -147,7 +153,7 @@ export default function ManageListings() {
             }
           />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto flex-1">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50">
@@ -169,7 +175,7 @@ export default function ManageListings() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.map((car) => (
+                {cars.map((car) => (
                   <tr
                     key={car.id}
                     className="hover:bg-gray-50/50 transition-colors cursor-pointer"
@@ -266,6 +272,35 @@ export default function ManageListings() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        
+        {/* Pagination Footer */}
+        {pagination?.totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 bg-gray-50/50">
+            <p className="text-xs text-gray-500">
+              Page {pagination.currentPage} of {pagination.totalPages} ({pagination.totalCount} total)
+            </p>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 text-xs"
+                disabled={pagination.currentPage <= 1 || isLoading}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+              >
+                <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Prev
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 text-xs"
+                disabled={pagination.currentPage >= pagination.totalPages || isLoading}
+                onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+              >
+                Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
+              </Button>
+            </div>
           </div>
         )}
       </div>

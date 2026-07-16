@@ -74,3 +74,24 @@ export async function uploadFile(file, carId) {
   // Returns array of created media objects: [{ id, carId, isPhoto, url, order }]
   return body.data;
 }
+
+/**
+ * Request a password reset email.
+ * Backend: POST /api/v1/auth/forgot-password
+ * @param {string} email
+ */
+export async function forgotPassword(email) {
+  const { data: body } = await api.post('/auth/forgot-password', { email });
+  return body;
+}
+
+/**
+ * Reset password using a token.
+ * Backend: POST /api/v1/auth/reset-password
+ * @param {string} token
+ * @param {string} newPassword
+ */
+export async function resetPassword(token, newPassword) {
+  const { data: body } = await api.post('/auth/reset-password', { token, newPassword });
+  return body;
+}

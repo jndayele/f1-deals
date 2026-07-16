@@ -3,18 +3,30 @@ const { emailQueue } = require('../config/queues');
 
 exports.submitEnquiry = async (req, res) => {
   try {
-    const { name, phoneNumber, email, message, type } = req.body;
+    const { name, phoneNumber, email, message, type, carId, carName } = req.body;
 
     if (!name || !phoneNumber || !message || !type) {
       return res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'Required fields missing' } });
     }
 
-    if (!['Financing', 'TradeIn', 'General'].includes(type)) {
-      return res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'Invalid type' } });
+    // Normalise type to match the Prisma enum (Financing | TradeIn | General)
+    const TYPE_MAP = {
+      financing: 'Financing',
+      'trade-in': 'TradeIn',
+      tradein: 'TradeIn',
+      general: 'General',
+      Financing: 'Financing',
+      TradeIn: 'TradeIn',
+      General: 'General',
+    };
+
+    const normalisedType = TYPE_MAP[type];
+    if (!normalisedType) {
+      return res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'Invalid enquiry type' } });
     }
 
     const enquiry = await prisma.enquiry.create({
-      data: { name, phoneNumber, email, message, type }
+      data: { name, phoneNumber, email, message, type: normalisedType }
     });
 
     await emailQueue.add('send-enquiry-email', {
@@ -23,7 +35,9 @@ exports.submitEnquiry = async (req, res) => {
       phoneNumber,
       email,
       message,
-      type
+      type: normalisedType,
+      carId: carId || null,
+      carName: carName || null,
     }, {
       attempts: 5,
       backoff: { type: 'exponential', delay: 2000 }

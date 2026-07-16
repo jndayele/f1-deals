@@ -1,12 +1,17 @@
 const prisma = require('../config/prisma');
 const { getPaginationParams, formatPaginatedResponse } = require('../utils/pagination');
 const { invalidateCache } = require('../middleware/cache.middleware');
+const socket = require('../config/socket');
 
-exports.getPendingReviews = async (req, res) => {
+exports.listReviews = async (req, res) => {
   try {
     const { page, pageSize, skip, take } = getPaginationParams(req);
+    const { status } = req.query;
 
-    const where = { status: 'Pending' };
+    const where = {};
+    if (status) {
+      where.status = status;
+    }
     const [totalCount, reviews] = await Promise.all([
       prisma.review.count({ where }),
       prisma.review.findMany({
@@ -41,6 +46,12 @@ exports.updateReviewStatus = async (req, res) => {
       where: { id: reviewId },
       data: { status }
     });
+
+    try {
+      socket.getIO().emit('review_moderated', review);
+    } catch (e) {
+      console.error('Socket error emitting review_moderated:', e);
+    }
 
     await invalidateCache('cache:reviews');
     res.status(200).json({ success: true, data: review });

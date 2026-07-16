@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { MessageSquare, CheckCircle, XCircle, Star } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { MessageSquare, CheckCircle, XCircle, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useReviews } from "@/hooks/useReviews";
@@ -30,8 +30,14 @@ function StarRating({ rating }) {
 
 export default function Reviews() {
   const [activeTab, setActiveTab] = useState("pending");
+  const [page, setPage] = useState(1);
   const { toast } = useToast();
-  const { reviews, isLoading, moderateReview } = useReviews({ status: activeTab });
+  
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab]);
+
+  const { reviews, pagination, isLoading, moderateReview } = useReviews({ status: activeTab, page });
 
   const handleModerate = async (id, status) => {
     await moderateReview.mutateAsync({ id, status });
@@ -141,6 +147,35 @@ export default function Reviews() {
               )}
             </div>
           ))}
+        </div>
+      )}
+      
+      {/* Pagination Footer */}
+      {!isLoading && pagination?.totalPages > 1 && (
+        <div className="flex items-center justify-between border border-gray-200 rounded-xl px-5 py-3 bg-white mt-4">
+          <p className="text-xs text-gray-500">
+            Page {pagination.currentPage} of {pagination.totalPages} ({pagination.totalCount} total)
+          </p>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 text-xs"
+              disabled={pagination.currentPage <= 1 || isLoading}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+            >
+              <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Prev
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 text-xs"
+              disabled={pagination.currentPage >= pagination.totalPages || isLoading}
+              onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+            >
+              Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

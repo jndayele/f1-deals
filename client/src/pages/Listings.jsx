@@ -1,19 +1,32 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Search, SlidersHorizontal, X, Scale } from "lucide-react";
 import CarCard from "@/components/CarCard";
 import CompareModal from "@/components/CompareModal";
 import ScrollReveal from "@/components/ScrollReveal";
 import { carService } from "@/lib/api";
+import socket from "@/lib/socket";
+import SEO from "@/components/SEO";
 
 const MAKES = ["All", "Toyota", "Honda", "Mercedes-Benz", "BMW", "Hyundai"];
 const BODY_TYPES = ["All", "Sedan", "SUV"];
 const CONDITIONS = ["All", "Brand New", "Foreign Used", "Local Used"];
 const YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024];
 
+// Debounce search input to avoid hammering the API on every keystroke
+function useDebounce(value, delay) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
 export default function Listings() {
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebounce(searchInput, 400);
   const [filters, setFilters] = useState({
     make: "All",
     bodyType: "All",
@@ -38,22 +51,33 @@ export default function Listings() {
   const clearCompare = () => setCompareList([]);
   const comparedCars = cars.filter((c) => compareList.includes(c.id));
 
-  useEffect(() => {
+  const fetchCars = useCallback(() => {
     setLoading(true);
-    const params = { search: search || undefined };
+    const params = {};
+    if (search) params.search = search;
     if (filters.make !== "All") params.make = filters.make;
     if (filters.bodyType !== "All") params.bodyType = filters.bodyType;
     if (filters.condition !== "All") params.condition = filters.condition;
-    if (filters.yearMin) params.yearMin = parseInt(filters.yearMin);
-    if (filters.yearMax) params.yearMax = parseInt(filters.yearMax);
-    if (filters.priceMin) params.priceMin = parseInt(filters.priceMin);
-    if (filters.priceMax) params.priceMax = parseInt(filters.priceMax);
+    if (filters.yearMin) params.year = parseInt(filters.yearMin);
+    if (filters.priceMin) params.minPrice = parseInt(filters.priceMin);
+    if (filters.priceMax) params.maxPrice = parseInt(filters.priceMax);
 
-    carService.getAll(params).then((data) => {
-      setCars(data);
+    carService.getAll(params).then((result) => {
+      setCars(result?.items ?? []);
+      setLoading(false);
+    }).catch(() => {
+      setCars([]);
       setLoading(false);
     });
   }, [search, filters]);
+
+  useEffect(() => {
+    fetchCars();
+
+    // Real-time: when admin adds a listing, auto-refresh
+    socket.on('new_listing', fetchCars);
+    return () => socket.off('new_listing', fetchCars);
+  }, [fetchCars]);
 
   const activeFilterCount = Object.entries(filters).filter(
     ([, v]) => v !== "All" && v !== ""
@@ -74,6 +98,12 @@ export default function Listings() {
 
   return (
     <div className={`bg-[#0A0A0A] min-h-screen pt-24 pb-20 ${compareList.length > 0 ? "pb-32" : ""}`}>
+      <SEO
+        title="Car Inventory — Buy New & Used Cars in Ghana"
+        description="Browse F1 Deals' full inventory of brand new, foreign used, and locally used cars available across Ghana. Filter by make, body type, year, and price. Fast delivery nationwide."
+        canonicalPath="/inventory"
+        ogImage="/home-page.png"
+      />
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
         {/* Header */}
         <ScrollReveal>
@@ -95,8 +125,8 @@ export default function Listings() {
             <input
               type="text"
               placeholder="Search by make, model, or name…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="w-full bg-white/5 border border-white/10 text-white text-sm pl-11 pr-4 py-3.5 font-body placeholder:text-white/30 focus:border-[#E10600] focus:outline-none transition-colors"
             />
           </div>

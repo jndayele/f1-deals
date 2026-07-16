@@ -16,5 +16,6 @@ router.delete('/:id', carAdminController.deleteCar);
 
 router.post('/:id/media', upload.array('files', 10), carAdminController.uploadMedia);
 router.put('/:id/media/reorder', carAdminController.reorderMedia);
+router.delete('/:id/media/:mediaId', carAdminController.deleteMedia);
 
 module.exports = router;

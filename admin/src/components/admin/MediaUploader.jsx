@@ -1,17 +1,14 @@
 import React, { useState, useRef, useCallback } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { Upload, X, GripVertical, Image, Film, Star, Loader2 } from "lucide-react";
-import { uploadFile } from "@/api/authApi";
+import { Upload, X, GripVertical, Image, Film, Star } from "lucide-react";
 
 export default function MediaUploader({ value = [], onChange }) {
-  const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleFiles = useCallback(
-    async (files) => {
+    (files) => {
       if (!files.length) return;
-      setUploading(true);
       const newMedia = [];
 
       for (const file of files) {
@@ -19,19 +16,17 @@ export default function MediaUploader({ value = [], onChange }) {
         const isImage = file.type.startsWith("image/");
         if (!isVideo && !isImage) continue;
 
-        try {
-          const { file_url } = await uploadFile(file);
-          newMedia.push({
-            url: file_url,
-            type: isVideo ? "video" : "image",
-          });
-        } catch (err) {
-          console.error("Failed to upload file:", file.name, err);
-        }
+        // Create a local preview URL and store the raw File object
+        // so CarForm can upload it later.
+        newMedia.push({
+          url: URL.createObjectURL(file), // temporary local preview
+          type: isVideo ? "video" : "image",
+          file, // the raw File object to upload later
+          isNew: true, // flag to indicate it needs to be uploaded
+        });
       }
 
       onChange([...value, ...newMedia]);
-      setUploading(false);
     },
     [value, onChange]
   );
@@ -51,6 +46,11 @@ export default function MediaUploader({ value = [], onChange }) {
   };
 
   const removeItem = (index) => {
+    // If we're removing a preview URL, we should clean it up to prevent memory leaks
+    const itemToRemove = value[index];
+    if (itemToRemove.isNew && itemToRemove.url.startsWith("blob:")) {
+      URL.revokeObjectURL(itemToRemove.url);
+    }
     onChange(value.filter((_, i) => i !== index));
   };
 
@@ -70,13 +70,9 @@ export default function MediaUploader({ value = [], onChange }) {
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
       >
-        {uploading ? (
-          <Loader2 className="w-8 h-8 text-red-500 mx-auto mb-2 animate-spin" />
-        ) : (
-          <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-        )}
+        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
         <p className="text-sm font-medium text-gray-700">
-          {uploading ? "Uploading..." : "Drop photos or videos here, or click to browse"}
+          Drop photos or videos here, or click to browse
         </p>
         <p className="text-xs text-gray-500 mt-1">
           Supports JPG, PNG, MP4, MOV
@@ -100,56 +96,63 @@ export default function MediaUploader({ value = [], onChange }) {
                 {...provided.droppableProps}
                 className="flex flex-wrap gap-3"
               >
-                {value.map((item, index) => (
-                  <Draggable
-                    key={`${item.url}-${index}`}
-                    draggableId={`${item.url}-${index}`}
-                    index={index}
-                  >
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className={`relative group w-28 h-28 rounded-lg overflow-hidden border-2 ${
-                          index === 0 ? "border-red-500" : "border-gray-200"
-                        } ${snapshot.isDragging ? "shadow-lg ring-2 ring-red-300" : ""}`}
-                      >
-                        {item.type === "video" ? (
-                          <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                            <Film className="w-8 h-8 text-white/60" />
-                          </div>
-                        ) : (
-                          <img
-                            src={item.url}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        )}
-
-                        {index === 0 && (
-                          <div className="absolute top-1 left-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                            <Star className="w-2.5 h-2.5" /> Cover
-                          </div>
-                        )}
-
+                {value.map((item, index) => {
+                  // A unique key is crucial for drag-and-drop.
+                  // For existing items we use their ID or URL. For new items we use the URL blob string.
+                  const uniqueKey = item.id ? `media-${item.id}` : `new-${item.url}`;
+                  return (
+                    <Draggable key={uniqueKey} draggableId={uniqueKey} index={index}>
+                      {(provided, snapshot) => (
                         <div
-                          {...provided.dragHandleProps}
-                          className="absolute top-1 right-7 bg-black/50 text-white p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-grab"
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={`relative group w-28 h-28 rounded-lg overflow-hidden border-2 ${
+                            index === 0 ? "border-red-500" : "border-gray-200"
+                          } ${snapshot.isDragging ? "shadow-lg ring-2 ring-red-300" : ""}`}
                         >
-                          <GripVertical className="w-3.5 h-3.5" />
-                        </div>
+                          {item.type === "video" ? (
+                            <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                              <Film className="w-8 h-8 text-white/60" />
+                            </div>
+                          ) : (
+                            <img
+                              src={item.url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          )}
 
-                        <button
-                          type="button"
-                          onClick={() => removeItem(index)}
-                          className="absolute top-1 right-1 bg-black/50 text-white p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
+                          {index === 0 && (
+                            <div className="absolute top-1 left-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                              <Star className="w-2.5 h-2.5" /> Cover
+                            </div>
+                          )}
+                          
+                          {item.isNew && (
+                            <div className="absolute bottom-1 left-1 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow">
+                              New
+                            </div>
+                          )}
+
+                          <div
+                            {...provided.dragHandleProps}
+                            className="absolute top-1 right-7 bg-black/50 text-white p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-grab"
+                          >
+                            <GripVertical className="w-3.5 h-3.5" />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => removeItem(index)}
+                            className="absolute top-1 right-1 bg-black/50 text-white p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </Draggable>
+                  );
+                })}
                 {provided.placeholder}
               </div>
             )}

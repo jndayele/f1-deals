@@ -1,53 +1,57 @@
-// API service layer — currently uses mock data.
-// Replace each function body with real API calls when backend is ready.
-// e.g. import axios from 'axios';
-// const api = axios.create({ baseURL: 'https://api.f1deals.com/v1' });
+import apiClient from '@/api/apiClient';
 
-import { MOCK_CARS, MOCK_REVIEWS } from "@/lib/mockData";
-
+// ─── Car Service ──────────────────────────────────────────────────────────────
 export const carService = {
+  /**
+   * Fetch all available/sold cars from the public API.
+   * Supported params: make, bodyType, condition, year, minPrice, maxPrice, page, pageSize
+   */
   getAll: async (params = {}) => {
-    let cars = [...MOCK_CARS];
-    if (params.make) cars = cars.filter(c => c.make === params.make);
-    if (params.bodyType) cars = cars.filter(c => c.bodyType === params.bodyType);
-    if (params.condition) cars = cars.filter(c => c.condition === params.condition);
-    if (params.yearMin) cars = cars.filter(c => c.year >= params.yearMin);
-    if (params.yearMax) cars = cars.filter(c => c.year <= params.yearMax);
-    if (params.priceMin) cars = cars.filter(c => c.price >= params.priceMin);
-    if (params.priceMax) cars = cars.filter(c => c.price <= params.priceMax);
-    if (params.search) {
-      const q = params.search.toLowerCase();
-      cars = cars.filter(c =>
-        c.name.toLowerCase().includes(q) ||
-        c.make.toLowerCase().includes(q) ||
-        c.model.toLowerCase().includes(q)
-      );
-    }
-    return cars;
+    // Map client-side filter names to what the backend expects
+    const query = {};
+    if (params.make && params.make !== 'All') query.make = params.make;
+    if (params.bodyType && params.bodyType !== 'All') query.bodyType = params.bodyType;
+    if (params.condition && params.condition !== 'All') query.condition = params.condition;
+    if (params.year) query.year = params.year;
+    if (params.minPrice) query.minPrice = params.minPrice;
+    if (params.maxPrice) query.maxPrice = params.maxPrice;
+    if (params.page) query.page = params.page;
+    if (params.pageSize) query.pageSize = params.pageSize;
+
+    const { data } = await apiClient.get('/cars', { params: query });
+    return data.data; // { items: [...], currentPage: ..., totalCount: ... }
   },
+
   getById: async (id) => {
-    return MOCK_CARS.find(c => c.id === id) || null;
+    const { data } = await apiClient.get(`/cars/${id}`);
+    return data.data;
   },
+
   getFeatured: async () => {
-    return MOCK_CARS.filter(c => !c.sold).slice(0, 4);
+    // Fetch first page of available cars and use up to 4 as featured
+    const { data } = await apiClient.get('/cars', { params: { pageSize: 4, page: 1 } });
+    return data.data?.items ?? [];
   },
 };
 
+// ─── Review Service ───────────────────────────────────────────────────────────
 export const reviewService = {
   getAll: async () => {
-    return MOCK_REVIEWS.filter(r => r.approved);
+    const { data } = await apiClient.get('/reviews');
+    // returns { items, averageRating, totalApprovedCount, ... }
+    return data.data;
   },
-  submit: async (data) => {
-    // POST /api/reviews
-    console.log("Review submitted:", data);
-    return { success: true };
+
+  submit: async (reviewData) => {
+    const { data } = await apiClient.post('/reviews', reviewData);
+    return data;
   },
 };
 
+// ─── Enquiry Service ──────────────────────────────────────────────────────────
 export const enquiryService = {
-  send: async (data) => {
-    // POST /api/enquiries
-    console.log("Enquiry sent:", data);
-    return { success: true };
+  send: async (enquiryData) => {
+    const { data } = await apiClient.post('/enquiries', enquiryData);
+    return data;
   },
-};
+};

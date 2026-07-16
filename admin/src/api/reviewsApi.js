@@ -30,22 +30,23 @@ function normalizeReview(review) {
  * @returns {Array} reviews
  */
 export async function getReviews(filters = {}) {
-  const status = filters.status?.toLowerCase();
-
-  if (!status || status === 'pending') {
-    // Admin endpoint only returns Pending
-    const { data: body } = await api.get('/admin/reviews');
-    const reviews = body.data?.reviews ?? body.data?.items ?? (Array.isArray(body.data) ? body.data : []);
-    return reviews.map(normalizeReview);
+  const params = { ...filters };
+  if (params.status) {
+    const map = { pending: 'Pending', approved: 'Approved', rejected: 'Rejected' };
+    params.status = map[params.status.toLowerCase()] || params.status;
   }
 
-  // For approved/rejected — use public endpoint with status filter
-  const statusMap = { approved: 'Approved', rejected: 'Rejected' };
-  const { data: body } = await api.get('/reviews', {
-    params: { status: statusMap[status] || status }
-  });
-  const reviews = body.data?.reviews ?? body.data?.items ?? (Array.isArray(body.data) ? body.data : []);
-  return reviews.map(normalizeReview);
+  const { data: body } = await api.get('/admin/reviews', { params });
+  const reviews = body.data?.items ?? body.data?.reviews ?? (Array.isArray(body.data) ? body.data : []);
+  return {
+    reviews: Array.isArray(reviews) ? reviews.map(normalizeReview) : [],
+    pagination: {
+      totalCount: body.data?.totalCount || 0,
+      totalPages: Math.ceil((body.data?.totalCount || 0) / (body.data?.pageSize || 10)) || 1,
+      currentPage: body.data?.currentPage || 1,
+      pageSize: body.data?.pageSize || 10
+    }
+  };
 }
 
 /**

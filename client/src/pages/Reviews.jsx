@@ -1,40 +1,71 @@
 import React, { useState, useEffect } from "react";
-import { Star } from "lucide-react";
+import { Star, CheckCircle2 } from "lucide-react";
 import ScrollReveal from "@/components/ScrollReveal";
 import StarRating from "@/components/StarRating";
 import { reviewService } from "@/lib/api";
+import socket from "@/lib/socket";
+import SEO from "@/components/SEO";
 
 export default function Reviews() {
   const [reviews, setReviews] = useState([]);
+  const [averageRating, setAverageRating] = useState("0.0");
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({ name: "", rating: 0, message: "" });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  useEffect(() => {
+  const fetchReviews = () => {
     reviewService.getAll().then((data) => {
-      setReviews(data);
+      setReviews(data?.items || []);
+      setAverageRating(data?.averageRating?.toFixed(1) || "0.0");
+      setTotalCount(data?.totalApprovedCount || 0);
+      setSubmitted(data?.hasPendingReview || false);
       setLoading(false);
     });
-  }, []);
+  };
 
-  const avgRating =
-    reviews.length > 0
-      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-      : "0.0";
+  useEffect(() => {
+    fetchReviews();
+
+    // When admin approves/rejects a review, re-fetch so the form reappears or new review shows
+    socket.on('review_moderated', fetchReviews);
+
+    return () => {
+      socket.off('review_moderated', fetchReviews);
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.rating === 0) return;
     setSubmitting(true);
-    await reviewService.submit(formData);
-    setSubmitting(false);
-    setSubmitted(true);
-    setFormData({ name: "", rating: 0, message: "" });
+    setErrorMsg("");
+    
+    try {
+      await reviewService.submit(formData);
+      setSubmitting(false);
+      setSubmitted(true);
+      setFormData({ name: "", rating: 0, message: "" });
+    } catch (err) {
+      setSubmitting(false);
+      if (err.response?.data?.error?.code === 'ALREADY_SUBMITTED') {
+        setSubmitted(true);
+      } else {
+        setErrorMsg("Something went wrong. Please try again.");
+      }
+    }
   };
 
   return (
     <div className="bg-[#0A0A0A] min-h-screen pt-24 pb-20">
+      <SEO
+        title="Customer Reviews — Real Experiences with F1 Deals"
+        description="Read verified reviews from F1 Deals customers across Ghana. See why hundreds of Ghanaians trust us to buy, sell, and swap their cars. Share your own experience too."
+        canonicalPath="/reviews"
+        ogImage="/home-page.png"
+      />
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
         {/* Header */}
         <ScrollReveal>
@@ -48,15 +79,15 @@ export default function Reviews() {
             </h1>
 
             {/* Average Rating */}
-            {!loading && reviews.length > 0 && (
+            {!loading && totalCount > 0 && (
               <div className="flex items-center gap-5">
                 <span className="font-heading text-5xl lg:text-6xl font-bold text-white">
-                  {avgRating}
+                  {averageRating}
                 </span>
                 <div>
-                  <StarRating rating={Math.round(parseFloat(avgRating))} size={20} />
+                  <StarRating rating={Math.round(parseFloat(averageRating))} size={20} />
                   <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/40 mt-1">
-                    Based on {reviews.length} review{reviews.length !== 1 ? "s" : ""}
+                    Based on {totalCount} review{totalCount !== 1 ? "s" : ""}
                   </p>
                 </div>
               </div>
@@ -88,7 +119,7 @@ export default function Reviews() {
                             {review.name}
                           </h3>
                           <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-white/30 mt-1">
-                            {new Date(review.date).toLocaleDateString("en-GB", {
+                            {new Date(review.createdAt || Date.now()).toLocaleDateString("en-GB", {
                               day: "numeric",
                               month: "long",
                               year: "numeric",
@@ -116,19 +147,13 @@ export default function Reviews() {
 
               {submitted ? (
                 <div className="text-center py-8">
-                  <Star size={32} className="fill-[#E10600] text-[#E10600] mx-auto mb-3" />
+                  <CheckCircle2 size={32} className="text-emerald-400 mx-auto mb-3" />
                   <p className="font-heading font-semibold text-white mb-1">
-                    Thank you!
+                    Review submitted!
                   </p>
                   <p className="text-sm text-white/40">
-                    Your review has been submitted for approval.
+                    Your review is pending approval. Once approved, the form will reappear and your review will be visible here.
                   </p>
-                  <button
-                    onClick={() => setSubmitted(false)}
-                    className="text-[#E10600] text-xs mt-4 font-mono uppercase tracking-wider hover:underline focus-visible:ring-2 focus-visible:ring-[#E10600] focus-visible:outline-none"
-                  >
-                    Write another
-                  </button>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -174,6 +199,12 @@ export default function Reviews() {
                       className="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-3 placeholder:text-white/20 focus:border-[#E10600] focus:outline-none transition-colors resize-none"
                     />
                   </div>
+                  
+                  {errorMsg && (
+                    <div className="p-3 bg-[#E10600]/20 border border-[#E10600]/50 text-white text-xs">
+                      {errorMsg}
+                    </div>
+                  )}
 
                   <button
                     type="submit"

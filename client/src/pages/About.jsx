@@ -2,13 +2,20 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import ScrollReveal from "@/components/ScrollReveal";
-import { getWhatsAppLink } from "@/lib/mockData";
+import { getWhatsAppLink } from "@/lib/constants";
+import SEO from "@/components/SEO";
 
 
 
 export default function About() {
   return (
     <div className="bg-[#0A0A0A] min-h-screen pt-24 pb-20">
+      <SEO
+        title="About Us — Ghana's Trusted Car Broker"
+        description="Learn about F1 Deals — Ghana's nationwide car broker founded on precision, speed, and transparency. We connect buyers and sellers across all 16 regions with honest, fair dealing."
+        canonicalPath="/about"
+        ogImage="/about.png"
+      />
       {/* Header */}
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 mb-16 lg:mb-24">
         <ScrollReveal>

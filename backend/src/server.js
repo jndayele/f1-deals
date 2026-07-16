@@ -2,6 +2,7 @@ require('dotenv').config();
 const app = require('./app');
 const prisma = require('./config/prisma');
 const logger = require('./utils/logger');
+const socket = require('./config/socket');
 const emailWorker = require('./workers/email.worker');
 const cronWorker = require('./workers/cron.worker');
 const { cronQueue } = require('./config/queues');
@@ -16,6 +17,9 @@ async function startServer() {
     const server = app.listen(PORT, () => {
       logger.info({ port: PORT }, `Server is running on port ${PORT}`);
     });
+
+    // Initialize Socket.io
+    socket.init(server);
 
     // Schedule daily cron job — BullMQ deduplicates it in Redis so safe across instances
     await cronQueue.add('archive-sold-cars', {}, {

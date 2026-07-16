@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const { getPaginationParams, formatPaginatedResponse } = require('../utils/pagination');
+const socket = require('../config/socket');
 
 exports.submitReview = async (req, res) => {
   try {
@@ -14,9 +15,29 @@ exports.submitReview = async (req, res) => {
       return res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'Rating must be between 1 and 5' } });
     }
 
-    const review = await prisma.review.create({
-      data: { name, rating: numericRating, message, status: 'Pending' }
+    const ipAddress = req.ip || req.connection?.remoteAddress || 'unknown';
+    
+    // Check if a pending review already exists for this IP
+    const existingPending = await prisma.review.count({
+      where: { ipAddress, status: 'Pending' }
     });
+
+    if (existingPending > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: { code: 'ALREADY_SUBMITTED', message: 'You already have a pending review.' } 
+      });
+    }
+
+    const review = await prisma.review.create({
+      data: { name, rating: numericRating, message, ipAddress, status: 'Pending' }
+    });
+
+    try {
+      socket.getIO().emit('new_review', review);
+    } catch (e) {
+      console.error('Socket error emitting new_review:', e);
+    }
 
     res.status(201).json({ 
       success: true, 
@@ -54,6 +75,12 @@ exports.getApprovedReviews = async (req, res) => {
     const averageRating = aggr._avg.rating ? parseFloat(aggr._avg.rating.toFixed(1)) : 0;
     const totalApprovedCount = aggr._count.id;
 
+    const ipAddress = req.ip || req.connection?.remoteAddress || 'unknown';
+    const pendingReviewCount = await prisma.review.count({
+      where: { ipAddress, status: 'Pending' }
+    });
+    const hasPendingReview = pendingReviewCount > 0;
+
     const baseResponse = formatPaginatedResponse(reviews, totalCount, page, pageSize);
     
     res.status(200).json({
@@ -61,7 +88,8 @@ exports.getApprovedReviews = async (req, res) => {
       data: {
         ...baseResponse,
         averageRating,
-        totalApprovedCount
+        totalApprovedCount,
+        hasPendingReview
       }
     });
   } catch (err) {

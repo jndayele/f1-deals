@@ -1,7 +1,8 @@
 import React from "react";
 import { ArrowRight } from "lucide-react";
 import ScrollReveal from "@/components/ScrollReveal";
-import { SERVICES, getWhatsAppLink } from "@/lib/mockData";
+import { SERVICES, getWhatsAppLink } from "@/lib/constants";
+import SEO from "@/components/SEO";
 
 const SERVICE_IMAGES = [
  "/home-page.png",
@@ -15,6 +16,12 @@ const SERVICE_IMAGES = [
 export default function Services() {
   return (
     <div className="bg-[#0A0A0A] min-h-screen pt-24 pb-20">
+      <SEO
+        title="Our Services — Car Buying, Selling, Shipping & More"
+        description="F1 Deals offers a full suite of automotive services in Ghana: car buying, selling, swapping, overseas shipping, maintenance, and genuine parts. Serving all 16 regions. Contact us on 055 436 7094."
+        canonicalPath="/services"
+        ogImage="/home-page.png"
+      />
       {/* Header */}
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 mb-16 lg:mb-24">
         <ScrollReveal>

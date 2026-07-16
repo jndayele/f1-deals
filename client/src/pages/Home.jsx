@@ -6,7 +6,8 @@ import ScrollReveal from "@/components/ScrollReveal";
 import CarCard from "@/components/CarCard";
 import StarRating from "@/components/StarRating";
 import { carService, reviewService } from "@/lib/api";
-import { getWhatsAppLink, SERVICES } from "@/lib/mockData";
+import { getWhatsAppLink, SERVICES } from "@/lib/constants";
+import SEO from "@/components/SEO";
 
 
 function CountUp({ target, suffix = "" }) {
@@ -45,9 +46,9 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([carService.getFeatured(), reviewService.getAll()]).then(
-      ([cars, revs]) => {
+      ([cars, reviewData]) => {
         setFeaturedCars(cars);
-        setReviews(revs);
+        setReviews(reviewData?.items || []);
         setLoading(false);
       }
     );
@@ -55,6 +56,12 @@ export default function Home() {
 
   return (
     <div>
+      <SEO
+        title="Buy, Sell & Swap Cars in Ghana"
+        description="F1 Deals is Ghana's #1 nationwide car broker. Buy brand new and foreign used cars, sell your vehicle for the best price, swap, ship, and get top-quality maintenance across all 16 regions. Call 055 436 7094."
+        canonicalPath="/"
+        ogImage="/home-page.png"
+      />
       {/* HERO */}
       <section className="relative min-h-screen flex items-end overflow-hidden">
         {/* Background Image */}

@@ -8,6 +8,7 @@ import SpecsFields from "@/components/admin/car-form/SpecsFields";
 import PricingFields from "@/components/admin/car-form/PricingFields";
 import MediaUploader from "@/components/admin/MediaUploader";
 import { useCars, useCar } from "@/hooks/useCars";
+import * as carsApi from "@/api/carsApi";
 
 const INITIAL_VALUES = {
   title: "",
@@ -35,6 +36,9 @@ export default function CarForm() {
 
   const [values, setValues] = useState(INITIAL_VALUES);
   const [saving, setSaving] = useState(false);
+  
+  // Keep track of original media IDs so we know what was deleted during edit
+  const [originalMediaIds, setOriginalMediaIds] = useState([]);
 
   useEffect(() => {
     if (isEdit && existingCar) {
@@ -53,6 +57,7 @@ export default function CarForm() {
         media: existingCar.media || [],
         status: existingCar.status || "active",
       });
+      setOriginalMediaIds((existingCar.media || []).map(m => m.id).filter(Boolean));
     }
   }, [isEdit, existingCar]);
 
@@ -72,22 +77,81 @@ export default function CarForm() {
     }
 
     setSaving(true);
+    
+    // Separate pure car data from media
     const payload = {
       ...values,
       year: Number(values.year),
       price: Number(values.price),
       mileage: values.mileage ? Number(values.mileage) : undefined,
     };
+    delete payload.media; // backend expects media to be uploaded separately
 
-    if (isEdit) {
-      await updateCar.mutateAsync({ id, data: payload });
-      toast({ title: "Car updated successfully" });
-    } else {
-      await createCar.mutateAsync(payload);
-      toast({ title: "Car added successfully" });
+    try {
+      let carId = isEdit ? id : null;
+
+      // 1. Save or Create the Car record
+      if (isEdit) {
+        await updateCar.mutateAsync({ id, data: payload });
+      } else {
+        const newCar = await createCar.mutateAsync(payload);
+        carId = newCar.id;
+      }
+
+      // 2. Handle Media Syncing
+      const currentMedia = values.media || [];
+      const newFilesToUpload = currentMedia.filter(m => m.isNew && m.file).map(m => m.file);
+      const currentMediaIds = currentMedia.map(m => m.id).filter(Boolean);
+
+      // 2a. Delete any existing media the user removed
+      if (isEdit) {
+        const deletedMediaIds = originalMediaIds.filter(id => !currentMediaIds.includes(id));
+        for (const mediaId of deletedMediaIds) {
+          try {
+            await carsApi.deleteCarMedia(carId, mediaId);
+          } catch (err) {
+            console.error(`Failed to delete media ${mediaId}`, err);
+          }
+        }
+      }
+
+      // 2b. Upload new files
+      let finalMediaItems = [...currentMedia];
+      if (newFilesToUpload.length > 0) {
+        toast({ title: "Uploading media..." });
+        const uploadedMediaObjects = await carsApi.uploadCarMedia(carId, newFilesToUpload);
+        
+        // We need to replace the local "blob" objects in finalMediaItems with the actual backend objects
+        // to get their real IDs for reordering.
+        let uploadIndex = 0;
+        finalMediaItems = finalMediaItems.map(m => {
+          if (m.isNew) {
+            const uploaded = uploadedMediaObjects[uploadIndex++];
+            return uploaded;
+          }
+          return m;
+        });
+      }
+
+      // 2c. Reorder all media based on the final arrangement
+      const finalOrderedIds = finalMediaItems.map(m => m.id).filter(Boolean);
+      if (finalOrderedIds.length > 0) {
+        await carsApi.reorderCarMedia(carId, finalOrderedIds);
+      }
+
+      toast({ title: isEdit ? "Car updated successfully" : "Car added successfully" });
+      navigate("/cars");
+      
+    } catch (err) {
+      console.error(err);
+      toast({ 
+        title: "Failed to save car", 
+        description: err.response?.data?.error?.message || err.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    navigate("/cars");
   };
 
   if (isEdit && loadingCar) {
@@ -153,7 +217,7 @@ export default function CarForm() {
             ) : (
               <Save className="w-4 h-4" />
             )}
-            {isEdit ? "Save Changes" : "Add Car"}
+            {saving ? "Saving..." : (isEdit ? "Save Changes" : "Add Car")}
           </Button>
         </div>
       </form>

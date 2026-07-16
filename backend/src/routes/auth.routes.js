@@ -6,5 +6,7 @@ const { loginLimiter } = require('../middleware/rateLimit.middleware');
 
 router.post('/login', loginLimiter, authController.login);
 router.post('/change-password', requireAdmin, authController.changePassword);
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
 
 module.exports = router;

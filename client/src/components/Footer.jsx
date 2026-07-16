@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { getWhatsAppLink } from "@/lib/mockData";
+import { getWhatsAppLink } from "@/lib/constants";
 
 
 export default function Footer() {
