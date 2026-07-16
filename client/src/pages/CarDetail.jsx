@@ -5,6 +5,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, MessageCircle, Send, X } from "lu
 import ScrollReveal from "@/components/ScrollReveal";
 import { carService, enquiryService } from "@/lib/api";
 import { getWhatsAppLink } from "@/lib/constants";
+import SEO from "@/components/SEO";
 
 export default function CarDetail() {
   const { id } = useParams();
@@ -72,8 +73,19 @@ export default function CarDetail() {
 
   const whatsappMsg = `Hi F1 Deals, I'm interested in the ${car.year} ${displayName} (GH₵${car.price?.toLocaleString()}). Is it still available?`;
 
+  const seoTitle = `${displayName} for Sale in Ghana`;
+  const seoDescription = `Buy the ${car.year} ${car.make} ${car.model} in Ghana for GH₵${car.price?.toLocaleString()}. ${car.condition ? car.condition + ' condition.' : ''} ${car.mileage ? car.mileage.toLocaleString() + ' km.' : ''} ${car.transmission || ''} ${car.fuelType || ''}. Available at F1 Deals — Ghana's trusted car broker. Contact us on WhatsApp: 055 436 7094.`.trim();
+  const seoImage = images[0] || '/home-page.png';
+
   return (
     <div className="bg-[#0A0A0A] min-h-screen pt-24 pb-20">
+      <SEO
+        title={seoTitle}
+        description={seoDescription}
+        canonicalPath={`/inventory/${id}`}
+        ogImage={seoImage}
+        type="product"
+      />
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
         {/* Back */}
         <Link

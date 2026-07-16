@@ -1,6 +1,5 @@
 const logger = require('../utils/logger');
 const { connection } = require('../config/queues');
-const transporter = require('../config/mail');
 const prisma = require('../config/prisma');
 const { Worker } = require('bullmq');
 
@@ -8,8 +7,10 @@ const emailWorker = new Worker('emailQueue', async (job) => {
   if (job.name === 'send-enquiry-email') {
     const { enquiryId, name, phoneNumber, email, message, type, carName } = job.data;
 
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@f1deals.com';
-    const fromAddress = process.env.SMTP_FROM || 'noreply@f1deals.com';
+    const adminEmail = process.env.ADMIN_EMAIL || 'ingawintiti@gmail.com';
+    const senderEmail = process.env.SENDER_EMAIL || 'ingawintiti@gmail.com';
+    const senderName = process.env.SENDER_NAME || 'F1 Deals';
+    const brevoApiKey = process.env.BREVO_API_KEY;
 
     const typeLabels = {
       Financing: '💰 Financing Enquiry',
@@ -91,14 +92,32 @@ const emailWorker = new Worker('emailQueue', async (job) => {
 </body>
 </html>`;
 
-    await transporter.sendMail({
-      from: `"F1 Deals Website" <${fromAddress}>`,
-      to: adminEmail,
-      replyTo: email || undefined,
+    const payload = {
+      sender: { name: senderName, email: senderEmail },
+      to: [{ email: adminEmail }],
       subject: `[F1 Deals] ${typeLabel} from ${name}`,
-      html,
-      text: `New ${type} enquiry from ${name}\nPhone: ${phoneNumber}\nEmail: ${email || 'N/A'}${carName ? `\nVehicle: ${carName}` : ''}\n\n${message}`,
+      htmlContent: html,
+      textContent: `New ${type} enquiry from ${name}\nPhone: ${phoneNumber}\nEmail: ${email || 'N/A'}${carName ? `\nVehicle: ${carName}` : ''}\n\n${message}`
+    };
+
+    if (email) {
+      payload.replyTo = { email };
+    }
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'api-key': brevoApiKey
+      },
+      body: JSON.stringify(payload)
     });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`Brevo API Error: ${response.status} ${errorData}`);
+    }
 
     await prisma.enquiry.update({
       where: { id: enquiryId },

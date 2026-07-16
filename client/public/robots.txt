@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Block admin-related paths from being indexed
+Disallow: /api/
+Disallow: /*.json$
+
+# Sitemap location
+Sitemap: https://f1deals.com/sitemap.xml
