@@ -9,7 +9,8 @@ import {
   LogOut,
   X,
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+
 
 const NAV_ITEMS = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
@@ -22,8 +23,10 @@ const NAV_ITEMS = [
 export default function Sidebar({ collapsed, mobileOpen, onClose }) {
   const location = useLocation();
 
+  const { logout } = useAuth();
+
   const handleLogout = () => {
-    base44.auth.logout("/login");
+    logout();
   };
 
   const isActive = (path) => {
@@ -54,11 +57,9 @@ export default function Sidebar({ collapsed, mobileOpen, onClose }) {
         } ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
         <div className="flex items-center gap-3 px-4 py-5 border-b border-white/10">
-          <img
-            src="https://media.base44.com/images/public/user_6a516bbaddc8ef31c90f41d3/12829faea_f1dealslogo.jpg"
-            alt="F1 Deals"
-            className="w-8 h-8 rounded object-contain bg-white flex-shrink-0"
-          />
+          <div className="w-8 h-8 rounded bg-red-600 flex items-center justify-center flex-shrink-0 font-bold text-white text-xs">
+            F1
+          </div>
           <span className={`font-bold text-lg tracking-tight ${collapsed ? "lg:hidden" : ""}`}>
             F1 Deals
           </span>

@@ -3,9 +3,20 @@ import * as authApi from '@/api/authApi';
 
 const AuthContext = createContext();
 
+// Decode a JWT payload without verifying signature (client-side display only)
+function parseJwtPayload(token) {
+  try {
+    const base64Payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(base64Payload));
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    // Restore user from localStorage on initial load
+    // Restore admin profile from localStorage on initial load
     try {
       const stored = localStorage.getItem('auth_user');
       return stored ? JSON.parse(stored) : null;
@@ -16,7 +27,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('auth_token'));
   const [isLoading, setIsLoading] = useState(true);
 
-  // On mount, verify the stored token is still valid
+  // On mount, verify the stored token is still valid by hitting a protected endpoint
   useEffect(() => {
     const verifyAuth = async () => {
       const token = localStorage.getItem('auth_token');
@@ -25,13 +36,25 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
         return;
       }
+
+      // Quick expiry check from the JWT payload (no signature verification)
+      const payload = parseJwtPayload(token);
+      if (payload?.exp && Date.now() / 1000 > payload.exp) {
+        // Token already expired locally — clear and redirect
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        setUser(null);
+        setIsAuthenticated(false);
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        const currentUser = await authApi.me();
-        setUser(currentUser);
-        localStorage.setItem('auth_user', JSON.stringify(currentUser));
+        // Validate with the server — me() hits a protected endpoint
+        await authApi.me();
         setIsAuthenticated(true);
       } catch {
-        // Token expired or invalid — clear everything
+        // Token rejected by backend (expired/invalid)
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
         setUser(null);
@@ -46,7 +69,11 @@ export const AuthProvider = ({ children }) => {
 
   const login = useCallback(async (email, password) => {
     const result = await authApi.login(email, password);
-    setUser(result.user);
+    // Backend returns { token, expiresIn } — no user object
+    // Store the admin email so we can display it in the Settings page
+    const adminProfile = { email };
+    localStorage.setItem('auth_user', JSON.stringify(adminProfile));
+    setUser(adminProfile);
     setIsAuthenticated(true);
     return result;
   }, []);

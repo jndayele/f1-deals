@@ -65,7 +65,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {!isLoading && <InventoryChart cars={data?.allCars || []} />}
+      {!isLoading && <InventoryChart trends={data?.inventoryTrends || []} />}
 
       <div className="bg-white rounded-xl border border-gray-200">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">

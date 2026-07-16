@@ -10,6 +10,7 @@ const carPublicRoutes = require('./routes/car.public.routes');
 const carAdminRoutes = require('./routes/car.admin.routes');
 const reviewPublicRoutes = require('./routes/review.public.routes');
 const reviewAdminRoutes = require('./routes/review.admin.routes');
+const dashboardAdminRoutes = require('./routes/dashboard.admin.routes');
 const enquiryPublicRoutes = require('./routes/enquiry.public.routes');
 const errorHandler = require('./middleware/error.middleware');
 
@@ -47,6 +48,7 @@ app.use('/api/v1/cars', carPublicRoutes);
 app.use('/api/v1/admin/cars', carAdminRoutes);
 app.use('/api/v1/reviews', reviewPublicRoutes);
 app.use('/api/v1/admin/reviews', reviewAdminRoutes);
+app.use('/api/v1/admin/dashboard', dashboardAdminRoutes);
 app.use('/api/v1/enquiries', enquiryPublicRoutes);
 
 // 404 Handler

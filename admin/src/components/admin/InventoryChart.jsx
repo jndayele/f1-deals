@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import {
   AreaChart,
   Area,
@@ -10,33 +10,13 @@ import {
   Legend,
 } from "recharts";
 
-export default function InventoryChart({ cars = [] }) {
-  const data = useMemo(() => {
-    const months = [];
-    const now = new Date();
-
-    for (let i = 5; i >= 0; i--) {
-      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
-      const monthLabel = monthStart.toLocaleDateString("en-US", { month: "short" });
-
-      const added = cars.filter((c) => {
-        if (!c.created_date) return false;
-        const d = new Date(c.created_date);
-        return d >= monthStart && d <= monthEnd;
-      }).length;
-
-      const sold = cars.filter((c) => {
-        if (!c.sold_date) return false;
-        const d = new Date(c.sold_date);
-        return d >= monthStart && d <= monthEnd;
-      }).length;
-
-      months.push({ month: monthLabel, added, sold });
-    }
-
-    return months;
-  }, [cars]);
+export default function InventoryChart({ trends = [] }) {
+  // We no longer need to useMemo to calculate the trends from raw cars;
+  // the backend provides it perfectly pre-formatted.
+  
+  // If the backend returns the array in descending time (newest first), reverse it for the chart (left to right = old to new)
+  // Let's ensure it's left to right
+  const data = [...trends].reverse(); 
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">

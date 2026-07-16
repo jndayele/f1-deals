@@ -3,45 +3,41 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Save, Loader2, User, Lock, Mail } from "lucide-react";
+import { Save, Loader2, User, Lock } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
-import { updateMe, forgotPassword } from "@/api/authApi";
+import { changePassword } from "@/api/authApi";
 
 export default function AdminSettings() {
   const { toast } = useToast();
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
 
-  const [fullName, setFullName] = useState(user?.full_name || "");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
-  const [sendingReset, setSendingReset] = useState(false);
 
-  const handleSave = async (e) => {
+  const handleChangePassword = async (e) => {
     e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
-      const updated = await updateMe({ full_name: fullName });
-      updateUser(updated);
-      toast({ title: "Profile updated" });
-    } catch {
-      toast({ title: "Failed to update profile", variant: "destructive" });
+      await changePassword(currentPassword, newPassword);
+      toast({ title: "Password changed successfully" });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      const message = err.response?.data?.error?.message || "Failed to change password";
+      toast({ title: message, variant: "destructive" });
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handlePasswordReset = async () => {
-    if (!user?.email) return;
-    setSendingReset(true);
-    try {
-      await forgotPassword(user.email);
-      toast({
-        title: "Password reset link sent",
-        description: `Check ${user.email} for instructions to reset your password.`,
-      });
-    } catch {
-      toast({ title: "Failed to send reset link", variant: "destructive" });
-    } finally {
-      setSendingReset(false);
     }
   };
 
@@ -49,36 +45,76 @@ export default function AdminSettings() {
     <div className="max-w-xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+      {/* Account Info */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
           <div className="p-2.5 bg-gray-100 rounded-lg">
             <User className="w-5 h-5 text-gray-600" />
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-900">Account</p>
-            <p className="text-xs text-gray-500">{user?.email}</p>
+            <p className="text-xs text-gray-500">{user?.email || "Admin"}</p>
           </div>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-4">
+        <div>
+          <Label>Email</Label>
+          <Input value={user?.email || ""} disabled className="bg-gray-50 mt-1" />
+          <p className="text-xs text-gray-500 mt-1">
+            Admin accounts are managed directly in the system.
+          </p>
+        </div>
+      </div>
+
+      {/* Change Password */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+        <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
+          <div className="p-2.5 bg-gray-100 rounded-lg">
+            <Lock className="w-5 h-5 text-gray-600" />
+          </div>
           <div>
-            <Label htmlFor="fullName">Full Name</Label>
+            <p className="text-sm font-semibold text-gray-900">Security</p>
+            <p className="text-xs text-gray-500">Change your password</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleChangePassword} className="space-y-4">
+          <div>
+            <Label htmlFor="currentPassword">Current Password</Label>
             <Input
-              id="fullName"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Your name"
+              id="currentPassword"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="••••••••"
+              className="mt-1"
+              required
             />
           </div>
-
           <div>
-            <Label>Email</Label>
-            <Input value={user?.email || ""} disabled className="bg-gray-50" />
-            <p className="text-xs text-gray-500 mt-1">
-              Contact support to change your email address
-            </p>
+            <Label htmlFor="newPassword">New Password</Label>
+            <Input
+              id="newPassword"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="••••••••"
+              className="mt-1"
+              required
+            />
           </div>
-
+          <div>
+            <Label htmlFor="confirmPassword">Confirm New Password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="••••••••"
+              className="mt-1"
+              required
+            />
+          </div>
           <div className="flex justify-end pt-2">
             <Button
               type="submit"
@@ -90,44 +126,10 @@ export default function AdminSettings() {
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              Save Changes
+              Change Password
             </Button>
           </div>
         </form>
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
-        <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
-          <div className="p-2.5 bg-gray-100 rounded-lg">
-            <Lock className="w-5 h-5 text-gray-600" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">Security</p>
-            <p className="text-xs text-gray-500">Manage your password</p>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-medium text-gray-900">Change Password</p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              We'll send a secure link to {user?.email} to reset your password
-            </p>
-          </div>
-          <Button
-            onClick={handlePasswordReset}
-            disabled={sendingReset}
-            variant="outline"
-            className="gap-2 flex-shrink-0"
-          >
-            {sendingReset ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Mail className="w-4 h-4" />
-            )}
-            Send Reset Link
-          </Button>
-        </div>
       </div>
     </div>
   );
