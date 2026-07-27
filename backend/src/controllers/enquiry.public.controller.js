@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const { emailQueue } = require('../config/queues');
+const socket = require('../config/socket');
 
 exports.submitEnquiry = async (req, res) => {
   try {
@@ -42,6 +43,12 @@ exports.submitEnquiry = async (req, res) => {
       attempts: 5,
       backoff: { type: 'exponential', delay: 2000 }
     });
+
+    try {
+      socket.getIO().emit('new_enquiry', enquiry);
+    } catch (e) {
+      console.error('Socket error emitting new_enquiry:', e);
+    }
 
     res.status(201).json({
       success: true,

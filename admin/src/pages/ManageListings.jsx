@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { useCars } from "@/hooks/useCars";
+import { useQueryClient } from "@tanstack/react-query";
+import socket from "@/lib/socket";
 import StatusBadge from "@/components/admin/StatusBadge";
 import EmptyState from "@/components/admin/EmptyState";
 import { SkeletonTable } from "@/components/admin/SkeletonLoader";
@@ -55,6 +57,23 @@ export default function ManageListings() {
   useEffect(() => {
     setPage(1);
   }, [activeTab, debouncedSearch]);
+
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ["cars"] });
+    };
+
+    socket.on('new_listing', invalidate);
+    socket.on('car_updated', invalidate);
+    socket.on('car_deleted', invalidate);
+
+    return () => {
+      socket.off('new_listing', invalidate);
+      socket.off('car_updated', invalidate);
+      socket.off('car_deleted', invalidate);
+    };
+  }, [queryClient]);
 
   const { cars, pagination, isLoading, updateCarStatus, deleteCar } = useCars({ 
     status: activeTab,
@@ -243,7 +262,7 @@ export default function ManageListings() {
                               <Pencil className="w-3.5 h-3.5" /> Edit
                             </Link>
                           </DropdownMenuItem>
-                          {car.status === "active" && (
+                          {car.status === "available" && (
                             <DropdownMenuItem
                               onClick={() => handleMarkSold(car)}
                               className="flex items-center gap-2"

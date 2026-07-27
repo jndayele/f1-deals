@@ -91,7 +91,7 @@ exports.forgotPassword = async (req, res) => {
     });
 
     // Frontend URL for resetting password
-    const frontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',')[0] : 'http://localhost:5174';
+    const frontendUrl = process.env.ADMIN_URL ? process.env.ADMIN_URL.split(',')[0] : 'http://localhost:5174';
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     await sendResetPasswordEmail(admin.email, resetUrl);

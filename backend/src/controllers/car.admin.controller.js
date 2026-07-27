@@ -110,6 +110,11 @@ exports.updateCar = async (req, res) => {
     });
 
     await invalidateCache('cache:cars');
+    try {
+      socket.getIO().emit('car_updated', car);
+    } catch (e) {
+      console.error('Socket error emitting car_updated:', e);
+    }
     res.status(200).json({ success: true, data: car });
   } catch (err) {
     console.error(err);
@@ -138,6 +143,12 @@ exports.changeStatus = async (req, res) => {
       data: updateData,
     });
 
+    try {
+      socket.getIO().emit('car_updated', car);
+    } catch (e) {
+      console.error('Socket error emitting car_updated:', e);
+    }
+
     await invalidateCache('cache:cars');
     res.status(200).json({ success: true, data: car });
   } catch (err) {
@@ -151,6 +162,12 @@ exports.deleteCar = async (req, res) => {
     const carId = parseInt(req.params.id, 10);
     await prisma.car.delete({ where: { id: carId } });
     await invalidateCache('cache:cars');
+    try {
+      socket.getIO().emit('car_deleted', { id: carId });
+    } catch (e) {
+      console.error('Socket error emitting car_deleted:', e);
+    }
+
     res.status(200).json({ success: true, data: { message: 'Car deleted successfully' } });
   } catch (err) {
     console.error(err);

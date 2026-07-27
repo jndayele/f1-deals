@@ -18,11 +18,15 @@ export function useReviews(filters = {}) {
 
   // Real-time: when a user submits a review, auto-refresh the admin list
   useEffect(() => {
-    const handleNewReview = () => {
+    const invalidate = () => {
       queryClient.invalidateQueries({ queryKey: ["reviews"] });
     };
-    socket.on("new_review", handleNewReview);
-    return () => socket.off("new_review", handleNewReview);
+    socket.on("new_review", invalidate);
+    socket.on("review_moderated", invalidate);
+    return () => {
+      socket.off("new_review", invalidate);
+      socket.off("review_moderated", invalidate);
+    };
   }, [queryClient]);
 
   return {

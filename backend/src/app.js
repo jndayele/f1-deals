@@ -20,7 +20,10 @@ const app = express();
 app.use(helmet());
 
 // Restrict CORS to known frontend origins
-const allowedOrigins = (process.env.FRONTEND_URL || '').split(',').map(o => o.trim()).filter(Boolean);
+const allowedOrigins = [
+  ...(process.env.FRONTEND_URL || '').split(','),
+  ...(process.env.ADMIN_URL || '').split(',')
+].map(o => o.trim()).filter(Boolean);
 app.use(cors({
   origin: (origin, callback) => {
     // Allow server-to-server requests (no origin) and listed origins

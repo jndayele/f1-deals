@@ -6,6 +6,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import CarCard from "@/components/CarCard";
 import StarRating from "@/components/StarRating";
 import { carService, reviewService } from "@/lib/api";
+import socket from "@/lib/socket";
 import { getWhatsAppLink, SERVICES } from "@/lib/constants";
 import SEO from "@/components/SEO";
 
@@ -44,6 +45,18 @@ export default function Home() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchFeaturedCars = () => {
+    carService.getFeatured().then((cars) => {
+      setFeaturedCars(cars);
+    });
+  };
+
+  const fetchReviews = () => {
+    reviewService.getAll().then((reviewData) => {
+      setReviews(reviewData?.items || []);
+    });
+  };
+
   useEffect(() => {
     Promise.all([carService.getFeatured(), reviewService.getAll()]).then(
       ([cars, reviewData]) => {
@@ -52,6 +65,18 @@ export default function Home() {
         setLoading(false);
       }
     );
+
+    socket.on('new_listing', fetchFeaturedCars);
+    socket.on('car_updated', fetchFeaturedCars);
+    socket.on('car_deleted', fetchFeaturedCars);
+    socket.on('review_moderated', fetchReviews);
+
+    return () => {
+      socket.off('new_listing', fetchFeaturedCars);
+      socket.off('car_updated', fetchFeaturedCars);
+      socket.off('car_deleted', fetchFeaturedCars);
+      socket.off('review_moderated', fetchReviews);
+    };
   }, []);
 
   return (

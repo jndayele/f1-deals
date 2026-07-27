@@ -1,7 +1,9 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Car, CheckCircle, Archive, MessageSquare, PlusCircle, ArrowRight } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
+import socket from "@/lib/socket";
 import StatCard from "@/components/admin/StatCard";
 import StatusBadge from "@/components/admin/StatusBadge";
 import { SkeletonCard, SkeletonRow } from "@/components/admin/SkeletonLoader";
@@ -10,6 +12,29 @@ import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
   const { data, isLoading } = useDashboardStats();
+  const queryClient = useQueryClient();
+
+  React.useEffect(() => {
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    };
+
+    socket.on('new_listing', invalidate);
+    socket.on('car_updated', invalidate);
+    socket.on('car_deleted', invalidate);
+    socket.on('review_moderated', invalidate);
+    socket.on('new_review', invalidate);
+    socket.on('new_enquiry', invalidate);
+
+    return () => {
+      socket.off('new_listing', invalidate);
+      socket.off('car_updated', invalidate);
+      socket.off('car_deleted', invalidate);
+      socket.off('review_moderated', invalidate);
+      socket.off('new_review', invalidate);
+      socket.off('new_enquiry', invalidate);
+    };
+  }, [queryClient]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">

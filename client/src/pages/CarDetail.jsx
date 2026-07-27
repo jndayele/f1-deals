@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, ChevronLeft, ChevronRight, MessageCircle, Send, X } from "lucide-react";
 import ScrollReveal from "@/components/ScrollReveal";
 import { carService, enquiryService } from "@/lib/api";
+import socket from "@/lib/socket";
 import { getWhatsAppLink } from "@/lib/constants";
 import SEO from "@/components/SEO";
 
 export default function CarDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [car, setCar] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
@@ -17,12 +19,41 @@ export default function CarDetail() {
   const [formSent, setFormSent] = useState(false);
   const [sending, setSending] = useState(false);
 
-  useEffect(() => {
+  const fetchCar = () => {
     carService.getById(id).then((data) => {
       setCar(data);
       setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [id]);
+    }).catch(() => {
+      setCar(null);
+      setLoading(false);
+    });
+  };
+
+  useEffect(() => {
+    fetchCar();
+    
+    const handleCarUpdated = (updatedCar) => {
+      if (updatedCar.id === parseInt(id)) {
+        // If status changed to Sold, we might want to reload to get formatted data
+        // or just apply the change directly:
+        fetchCar();
+      }
+    };
+    
+    const handleCarDeleted = (deletedCar) => {
+      if (deletedCar.id === parseInt(id)) {
+        navigate('/inventory');
+      }
+    };
+
+    socket.on('car_updated', handleCarUpdated);
+    socket.on('car_deleted', handleCarDeleted);
+
+    return () => {
+      socket.off('car_updated', handleCarUpdated);
+      socket.off('car_deleted', handleCarDeleted);
+    };
+  }, [id, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

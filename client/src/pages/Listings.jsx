@@ -74,9 +74,16 @@ export default function Listings() {
   useEffect(() => {
     fetchCars();
 
-    // Real-time: when admin adds a listing, auto-refresh
+    // Real-time: auto-refresh when admin modifies listings
     socket.on('new_listing', fetchCars);
-    return () => socket.off('new_listing', fetchCars);
+    socket.on('car_updated', fetchCars);
+    socket.on('car_deleted', fetchCars);
+
+    return () => {
+      socket.off('new_listing', fetchCars);
+      socket.off('car_updated', fetchCars);
+      socket.off('car_deleted', fetchCars);
+    };
   }, [fetchCars]);
 
   const activeFilterCount = Object.entries(filters).filter(
