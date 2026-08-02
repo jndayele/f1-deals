@@ -16,6 +16,9 @@ const errorHandler = require('./middleware/error.middleware');
 
 const app = express();
 
+// Trust proxy for reverse proxies (Render, Heroku, Vercel, etc.)
+app.set('trust proxy', 1);
+
 // Security headers
 app.use(helmet());
 

@@ -10,7 +10,11 @@ module.exports = {
         origin: allowedOrigins.length > 0 ? allowedOrigins : '*',
         methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
         credentials: true
-      }
+      },
+      // Connection stability settings for Render / reverse proxies
+      pingTimeout: 60000,
+      pingInterval: 25000,
+      transports: ['websocket', 'polling']
     });
 
     io.on('connection', (socket) => {
