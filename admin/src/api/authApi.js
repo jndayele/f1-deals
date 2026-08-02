@@ -1,67 +1,46 @@
 import api from './apiClient';
+import { supabase } from '@/lib/supabase';
 
 /**
- * Log in with email and password.
- *
- * Backend: POST /api/v1/auth/login
- * Response: { success: true, data: { token, expiresIn } }
- *
- * Stores the returned JWT token in localStorage.
- * @returns {{ token: string, expiresIn: string }}
+ * Log in with email and password via Supabase Auth.
+ * Supabase manages the session automatically (no localStorage needed).
  */
 export async function login(email, password) {
-  const { data: body } = await api.post('/auth/login', { email, password });
-  // body = { success: true, data: { token, expiresIn } }
-  const { token, expiresIn } = body.data;
-  localStorage.setItem('auth_token', token);
-  return { token, expiresIn };
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
 }
 
 /**
- * Verify the token is still valid by calling change-password endpoint
- * with a no-op body — we only need a 200/401 signal.
- *
- * NOTE: The backend has no /me endpoint. Token validation is done
- * by hitting any requireAdmin-protected endpoint. We store the
- * admin email at login time and restore it from localStorage.
- *
- * @returns {Object} stored admin profile from localStorage
+ * Check if there is a valid current Supabase session.
+ * @returns {Object|null} the Supabase user object, or null
  */
 export async function me() {
-  // Try hitting a protected endpoint to confirm the token works
-  // We use a lightweight HEAD-style approach — list cars with page=1&pageSize=1
-  await api.get('/admin/cars', { params: { pageSize: 1 } });
-  // If we get here, the token is valid — return stored profile
-  const stored = localStorage.getItem('auth_user');
-  return stored ? JSON.parse(stored) : null;
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
 }
 
 /**
- * Log out the current user, clearing local storage.
- * Backend has no logout endpoint — JWT is stateless.
+ * Sign out via Supabase Auth.
  */
 export async function logout() {
-  localStorage.removeItem('auth_token');
-  localStorage.removeItem('auth_user');
+  await supabase.auth.signOut();
 }
 
 /**
  * Change the current admin's password.
- * Backend: POST /api/v1/auth/change-password
- * Requires: { currentPassword, newPassword }
+ * Backend: POST /api/v1/auth/change-password (requireAdmin protected).
+ * Note: currentPassword is not needed — Supabase Admin API handles this server-side.
+ * @param {string} newPassword
  */
-export async function changePassword(currentPassword, newPassword) {
-  const { data: body } = await api.post('/auth/change-password', { currentPassword, newPassword });
+export async function changePassword(newPassword) {
+  const { data: body } = await api.post('/auth/change-password', { newPassword });
   return body.data;
 }
 
 /**
  * Upload files directly to the backend (multipart/form-data).
  * Backend: POST /api/v1/admin/cars/:id/media
- * NOTE: File upload is tied to a specific car. During car creation,
- * media is uploaded after the car is created. See carsApi.js for the
- * uploadCarMedia helper.
- *
  * @param {File} file
  * @param {number} carId
  */
@@ -71,27 +50,27 @@ export async function uploadFile(file, carId) {
   const { data: body } = await api.post(`/admin/cars/${carId}/media`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
-  // Returns array of created media objects: [{ id, carId, isPhoto, url, order }]
   return body.data;
 }
 
 /**
- * Request a password reset email.
- * Backend: POST /api/v1/auth/forgot-password
+ * Request a password reset email via Supabase Auth.
+ * Supabase sends the email automatically — no backend endpoint needed.
  * @param {string} email
  */
 export async function forgotPassword(email) {
-  const { data: body } = await api.post('/auth/forgot-password', { email });
-  return body;
+  const redirectTo = `${window.location.origin}/reset-password`;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) throw error;
 }
 
 /**
- * Reset password using a token.
- * Backend: POST /api/v1/auth/reset-password
- * @param {string} token
+ * Update the password after clicking the reset link from email.
+ * Supabase sets the session automatically when the user lands on /reset-password
+ * with the token in the URL hash — then we call updateUser to set the new password.
  * @param {string} newPassword
  */
-export async function resetPassword(token, newPassword) {
-  const { data: body } = await api.post('/auth/reset-password', { token, newPassword });
-  return body;
+export async function resetPassword(newPassword) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
 }

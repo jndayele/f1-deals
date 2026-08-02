@@ -15,24 +15,53 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
-    const invalidate = () => {
+    const updateStats = (updater) => {
+      queryClient.setQueryData(["dashboard-stats"], (old) => {
+        if (!old) return old;
+        return updater(old);
+      });
+    };
+
+    const handleNewListing = (car) => {
+      updateStats(old => ({
+        ...old,
+        activeCars: old.activeCars + 1,
+        recentListings: [car, ...old.recentListings].slice(0, 5)
+      }));
+    };
+
+    const handleNewReview = () => {
+      updateStats(old => ({ ...old, pendingReviews: old.pendingReviews + 1 }));
+    };
+
+    const handleReviewModerated = () => {
+      updateStats(old => ({ ...old, pendingReviews: Math.max(0, old.pendingReviews - 1) }));
+    };
+
+    const handleCarDeleted = (data) => {
+      // Invalidate to get true accurate numbers since we don't know the deleted car's status
       queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
     };
 
-    socket.on('new_listing', invalidate);
-    socket.on('car_updated', invalidate);
-    socket.on('car_deleted', invalidate);
-    socket.on('review_moderated', invalidate);
-    socket.on('new_review', invalidate);
-    socket.on('new_enquiry', invalidate);
+    const handleCarUpdated = () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    };
+
+    socket.on('new_listing', handleNewListing);
+    socket.on('car_updated', handleCarUpdated);
+    socket.on('car_deleted', handleCarDeleted);
+    socket.on('review_moderated', handleReviewModerated);
+    socket.on('new_review', handleNewReview);
+    // Enquiries don't affect stats in Dashboard right now
+    socket.on('new_enquiry', handleCarUpdated); 
 
     return () => {
-      socket.off('new_listing', invalidate);
-      socket.off('car_updated', invalidate);
-      socket.off('car_deleted', invalidate);
-      socket.off('review_moderated', invalidate);
-      socket.off('new_review', invalidate);
-      socket.off('new_enquiry', invalidate);
+      socket.off('new_listing', handleNewListing);
+      socket.off('car_updated', handleCarUpdated);
+      socket.off('car_deleted', handleCarDeleted);
+      socket.off('review_moderated', handleReviewModerated);
+      socket.off('new_review', handleNewReview);
+      socket.off('new_enquiry', handleCarUpdated);
     };
   }, [queryClient]);
 

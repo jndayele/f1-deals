@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { Upload, X, GripVertical, Image, Film, Star } from "lucide-react";
+import { Upload, X, GripVertical, Film, Star } from "lucide-react";
 
 export default function MediaUploader({ value = [], onChange }) {
   const [dragOver, setDragOver] = useState(false);

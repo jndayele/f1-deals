@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const { getPaginationParams, formatPaginatedResponse } = require('../utils/pagination');
 const socket = require('../config/socket');
+const { sendNewReviewNotification } = require('../utils/mailer');
 
 exports.submitReview = async (req, res) => {
   try {
@@ -38,6 +39,10 @@ exports.submitReview = async (req, res) => {
     } catch (e) {
       console.error('Socket error emitting new_review:', e);
     }
+
+    // Send email notification to admin asynchronously
+    sendNewReviewNotification(review).catch(e => console.error('Email error:', e));
+
 
     res.status(201).json({ 
       success: true, 

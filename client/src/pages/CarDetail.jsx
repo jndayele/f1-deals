@@ -34,9 +34,7 @@ export default function CarDetail() {
     
     const handleCarUpdated = (updatedCar) => {
       if (updatedCar.id === parseInt(id)) {
-        // If status changed to Sold, we might want to reload to get formatted data
-        // or just apply the change directly:
-        fetchCar();
+        setCar(updatedCar);
       }
     };
     

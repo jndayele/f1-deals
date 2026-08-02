@@ -13,7 +13,7 @@ export default function AdminSettings() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [currentPassword, setCurrentPassword] = useState("");
+
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
@@ -30,9 +30,8 @@ export default function AdminSettings() {
     }
     setSaving(true);
     try {
-      await changePassword(currentPassword, newPassword);
+      await changePassword(newPassword);
       toast({ title: "Password changed successfully. Please log in again." });
-      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
       
@@ -85,18 +84,6 @@ export default function AdminSettings() {
         </div>
 
         <form onSubmit={handleChangePassword} className="space-y-4">
-          <div>
-            <Label htmlFor="currentPassword">Current Password</Label>
-            <Input
-              id="currentPassword"
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="••••••••"
-              className="mt-1"
-              required
-            />
-          </div>
           <div>
             <Label htmlFor="newPassword">New Password</Label>
             <Input

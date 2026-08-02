@@ -73,18 +73,37 @@ export default function Listings() {
 
   useEffect(() => {
     fetchCars();
+  }, [fetchCars]);
 
-    // Real-time: auto-refresh when admin modifies listings
-    socket.on('new_listing', fetchCars);
-    socket.on('car_updated', fetchCars);
-    socket.on('car_deleted', fetchCars);
+  // Real-time: instantly update the UI when admin modifies listings (no network delay)
+  useEffect(() => {
+    const handleNewListing = (car) => {
+      setCars((prev) => {
+        if (!prev.some((c) => c.id === car.id)) {
+          return [car, ...prev];
+        }
+        return prev;
+      });
+    };
+
+    const handleCarUpdated = (car) => {
+      setCars((prev) => prev.map((c) => (c.id === car.id ? car : c)));
+    };
+
+    const handleCarDeleted = ({ id }) => {
+      setCars((prev) => prev.filter((c) => c.id !== id));
+    };
+
+    socket.on('new_listing', handleNewListing);
+    socket.on('car_updated', handleCarUpdated);
+    socket.on('car_deleted', handleCarDeleted);
 
     return () => {
-      socket.off('new_listing', fetchCars);
-      socket.off('car_updated', fetchCars);
-      socket.off('car_deleted', fetchCars);
+      socket.off('new_listing', handleNewListing);
+      socket.off('car_updated', handleCarUpdated);
+      socket.off('car_deleted', handleCarDeleted);
     };
-  }, [fetchCars]);
+  }, []);
 
   const activeFilterCount = Object.entries(filters).filter(
     ([, v]) => v !== "All" && v !== ""

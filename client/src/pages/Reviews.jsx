@@ -29,11 +29,21 @@ export default function Reviews() {
   useEffect(() => {
     fetchReviews();
 
-    // When admin approves/rejects a review, re-fetch so the form reappears or new review shows
-    socket.on('review_moderated', fetchReviews);
+    const handleReviewModerated = (review) => {
+      setReviews((prev) => {
+        if (prev.some((r) => r.id === review.id)) {
+          return prev.map((r) => (r.id === review.id ? review : r));
+        }
+        return [review, ...prev];
+      });
+      // Increment total count optimistically if it's new
+      setTotalCount((prev) => prev + 1);
+    };
+
+    socket.on('review_moderated', handleReviewModerated);
 
     return () => {
-      socket.off('review_moderated', fetchReviews);
+      socket.off('review_moderated', handleReviewModerated);
     };
   }, []);
 

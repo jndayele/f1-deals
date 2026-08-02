@@ -21,7 +21,7 @@ export default function ForgotPassword() {
       await forgotPassword(email);
       setSuccess(true);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to send reset link");
+      setError(err.message || "Failed to send reset link. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -41,7 +41,7 @@ export default function ForgotPassword() {
         <div className="bg-emerald-50 text-emerald-700 p-4 rounded-lg flex items-start gap-3 border border-emerald-100">
           <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <p className="text-sm">
-            If <b>{email}</b> is registered, a password reset link has been sent to it. (Check the backend terminal to get the Ethereal email preview link)
+            If <b>{email}</b> is registered, a password reset link has been sent to it. Check your inbox (and spam folder).
           </p>
         </div>
       ) : (

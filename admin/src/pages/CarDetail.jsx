@@ -8,7 +8,7 @@ import {
   Fuel,
   Settings2,
   Calendar,
-  Tag,
+
   CheckCircle,
   Film,
   ChevronLeft,

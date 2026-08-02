@@ -1,9 +1,10 @@
 const prisma = require('../config/prisma');
-const cloudinary = require('../config/cloudinary');
-const streamifier = require('streamifier');
+const supabase = require('../config/supabase');
 const { getPaginationParams, formatPaginatedResponse } = require('../utils/pagination');
 const { invalidateCache } = require('../middleware/cache.middleware');
 const socket = require('../config/socket');
+
+const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'car-media';
 
 exports.listCars = async (req, res) => {
   try {
@@ -160,6 +161,18 @@ exports.changeStatus = async (req, res) => {
 exports.deleteCar = async (req, res) => {
   try {
     const carId = parseInt(req.params.id, 10);
+
+    // Fetch all media so we can remove files from Supabase Storage
+    const mediaItems = await prisma.carMedia.findMany({ where: { carId } });
+    const paths = mediaItems.map(m => m.storagePath).filter(Boolean);
+    if (paths.length > 0) {
+      const { error: storageError } = await supabase.storage.from(BUCKET).remove(paths);
+      if (storageError) {
+        console.error('Supabase Storage delete error (deleteCar):', storageError);
+      }
+    }
+
+    // Cascade delete removes CarMedia rows automatically (onDelete: Cascade in schema)
     await prisma.car.delete({ where: { id: carId } });
     await invalidateCache('cache:cars');
     try {
@@ -175,17 +188,25 @@ exports.deleteCar = async (req, res) => {
   }
 };
 
-const uploadToCloudinary = (file) => {
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      { resource_type: 'auto', folder: 'f1deals' },
-      (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      }
-    );
-    streamifier.createReadStream(file.buffer).pipe(uploadStream);
-  });
+/**
+ * Upload a single file buffer to Supabase Storage.
+ * Returns { publicUrl, storagePath }.
+ */
+const uploadToSupabase = async (file, carId) => {
+  const ext = file.mimetype.split('/')[1] || 'bin';
+  const storagePath = `cars/${carId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(storagePath, file.buffer, {
+      contentType: file.mimetype,
+      upsert: false,
+    });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
+  return { publicUrl: data.publicUrl, storagePath };
 };
 
 exports.uploadMedia = async (req, res) => {
@@ -200,15 +221,16 @@ exports.uploadMedia = async (req, res) => {
 
     const uploadedMedia = [];
     for (const file of req.files) {
-      const result = await uploadToCloudinary(file);
+      const { publicUrl, storagePath } = await uploadToSupabase(file, carId);
       maxOrder += 1;
-      const isPhoto = result.resource_type === 'image';
+      const isPhoto = file.mimetype.startsWith('image/');
 
       const media = await prisma.carMedia.create({
         data: {
           carId,
           isPhoto,
-          url: result.secure_url,
+          url: publicUrl,
+          storagePath,
           order: maxOrder
         }
       });
@@ -268,14 +290,13 @@ exports.deleteMedia = async (req, res) => {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Media not found' } });
     }
 
-    if (media.url.includes('cloudinary.com')) {
-      try {
-        const parts = media.url.split('/');
-        const fileWithExt = parts[parts.length - 1];
-        const publicId = `f1deals/${fileWithExt.split('.')[0]}`;
-        await cloudinary.uploader.destroy(publicId, { resource_type: media.isPhoto ? 'image' : 'video' });
-      } catch (cloudErr) {
-        console.error('Failed to delete from Cloudinary:', cloudErr);
+    // Remove from Supabase Storage
+    if (media.storagePath) {
+      const { error: storageError } = await supabase.storage
+        .from(BUCKET)
+        .remove([media.storagePath]);
+      if (storageError) {
+        console.error('Supabase Storage delete error:', storageError);
       }
     }
 

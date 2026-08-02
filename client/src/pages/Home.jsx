@@ -66,16 +66,38 @@ export default function Home() {
       }
     );
 
-    socket.on('new_listing', fetchFeaturedCars);
-    socket.on('car_updated', fetchFeaturedCars);
-    socket.on('car_deleted', fetchFeaturedCars);
-    socket.on('review_moderated', fetchReviews);
+    const handleNewListing = (car) => {
+      setFeaturedCars((prev) => {
+        if (!prev.some((c) => c.id === car.id)) return [car, ...prev].slice(0, 4); // Keep top 4
+        return prev;
+      });
+    };
+
+    const handleCarUpdated = (car) => {
+      setFeaturedCars((prev) => prev.map((c) => (c.id === car.id ? car : c)));
+    };
+
+    const handleCarDeleted = ({ id }) => {
+      setFeaturedCars((prev) => prev.filter((c) => c.id !== id));
+    };
+
+    const handleReviewModerated = (review) => {
+      setReviews((prev) => {
+        if (!prev.some((r) => r.id === review.id)) return [review, ...prev].slice(0, 3);
+        return prev;
+      });
+    };
+
+    socket.on('new_listing', handleNewListing);
+    socket.on('car_updated', handleCarUpdated);
+    socket.on('car_deleted', handleCarDeleted);
+    socket.on('review_moderated', handleReviewModerated);
 
     return () => {
-      socket.off('new_listing', fetchFeaturedCars);
-      socket.off('car_updated', fetchFeaturedCars);
-      socket.off('car_deleted', fetchFeaturedCars);
-      socket.off('review_moderated', fetchReviews);
+      socket.off('new_listing', handleNewListing);
+      socket.off('car_updated', handleCarUpdated);
+      socket.off('car_deleted', handleCarDeleted);
+      socket.off('review_moderated', handleReviewModerated);
     };
   }, []);
 

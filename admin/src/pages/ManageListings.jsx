@@ -60,18 +60,37 @@ export default function ManageListings() {
 
   const queryClient = useQueryClient();
   useEffect(() => {
-    const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: ["cars"] });
+    const handleNewListing = (car) => {
+      queryClient.setQueriesData({ queryKey: ["cars"] }, (old) => {
+        if (!old || !old.cars) return old;
+        return { ...old, cars: [car, ...old.cars] };
+      });
     };
 
-    socket.on('new_listing', invalidate);
-    socket.on('car_updated', invalidate);
-    socket.on('car_deleted', invalidate);
+    const handleCarUpdated = (car) => {
+      queryClient.setQueriesData({ queryKey: ["cars"] }, (old) => {
+        if (!old || !old.cars) return old;
+        // If status changed and no longer matches current tab, we should technically remove it,
+        // but updating it in place is fine as the next pagination will clean it up.
+        return { ...old, cars: old.cars.map((c) => (c.id === car.id ? car : c)) };
+      });
+    };
+
+    const handleCarDeleted = ({ id }) => {
+      queryClient.setQueriesData({ queryKey: ["cars"] }, (old) => {
+        if (!old || !old.cars) return old;
+        return { ...old, cars: old.cars.filter((c) => c.id !== id) };
+      });
+    };
+
+    socket.on('new_listing', handleNewListing);
+    socket.on('car_updated', handleCarUpdated);
+    socket.on('car_deleted', handleCarDeleted);
 
     return () => {
-      socket.off('new_listing', invalidate);
-      socket.off('car_updated', invalidate);
-      socket.off('car_deleted', invalidate);
+      socket.off('new_listing', handleNewListing);
+      socket.off('car_updated', handleCarUpdated);
+      socket.off('car_deleted', handleCarDeleted);
     };
   }, [queryClient]);
 
