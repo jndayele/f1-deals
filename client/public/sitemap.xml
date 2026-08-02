@@ -6,7 +6,7 @@
 
   <!-- Homepage — highest priority -->
   <url>
-    <loc>https://f1deals.com/</loc>
+    <loc>https://f1-deals-plbz.vercel.app/</loc>
     <lastmod>2026-07-16</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
@@ -14,7 +14,7 @@
 
   <!-- Inventory / Listings -->
   <url>
-    <loc>https://f1deals.com/inventory</loc>
+    <loc>https://f1-deals-plbz.vercel.app/inventory</loc>
     <lastmod>2026-07-16</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
@@ -22,7 +22,7 @@
 
   <!-- Services -->
   <url>
-    <loc>https://f1deals.com/services</loc>
+    <loc>https://f1-deals-plbz.vercel.app/services</loc>
     <lastmod>2026-07-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -30,7 +30,7 @@
 
   <!-- About -->
   <url>
-    <loc>https://f1deals.com/about</loc>
+    <loc>https://f1-deals-plbz.vercel.app/about</loc>
     <lastmod>2026-07-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -38,7 +38,7 @@
 
   <!-- Reviews -->
   <url>
-    <loc>https://f1deals.com/reviews</loc>
+    <loc>https://f1-deals-plbz.vercel.app/reviews</loc>
     <lastmod>2026-07-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -46,7 +46,7 @@
 
   <!-- Contact -->
   <url>
-    <loc>https://f1deals.com/contact</loc>
+    <loc>https://f1-deals-plbz.vercel.app/contact</loc>
     <lastmod>2026-07-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
